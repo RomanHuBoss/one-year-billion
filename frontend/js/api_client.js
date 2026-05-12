@@ -3,6 +3,10 @@ export async function api(path, options = {}) {
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options
   });
-  if (!response.ok) throw new Error(`Ошибка API ${response.status}: ${path}`);
-  return response.json();
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message = payload.detail ? JSON.stringify(payload.detail) : `${response.status}`;
+    throw new Error(`Ошибка API ${response.status}: ${message}`);
+  }
+  return payload;
 }

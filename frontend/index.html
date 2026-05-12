@@ -3,44 +3,144 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crypto Acceleration System 2026</title>
+  <title>Операторский модуль · Crypto Acceleration System 2026</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div>
-      <h1>Crypto Acceleration System 2026</h1>
-      <p>Только Bybit Linear USDT Futures · источник статуса — backend</p>
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">CAS</div>
+      <div>
+        <h1>Операторский модуль</h1>
+        <p>Crypto Acceleration System 2026 · только Bybit Linear USDT Futures</p>
+      </div>
     </div>
-    <button id="refreshBtn">Обновить</button>
+    <div class="header-actions">
+      <span id="topStatus" class="status-pill neutral">загрузка</span>
+      <button id="refreshBtn" class="btn primary">Обновить</button>
+    </div>
   </header>
 
-  <main>
-    <section class="grid cards">
-      <article class="card"><h2>Состояние</h2><pre id="health">загрузка...</pre></article>
-      <article class="card"><h2>Риск</h2><pre id="risk">загрузка...</pre></article>
-      <article class="card"><h2>ML</h2><pre id="ml">загрузка...</pre></article>
-      <article class="card"><h2>Runtime-проверка</h2><pre id="runtime">загрузка...</pre></article>
+  <main class="shell">
+    <section id="hero" class="hero-card loading">
+      <div>
+        <p class="eyebrow">Текущее состояние</p>
+        <h2 id="heroTitle">Загрузка состояния...</h2>
+        <p id="heroMessage" class="hero-message">Получаем данные из backend.</p>
+      </div>
+      <div class="hero-next">
+        <span>Что делать сейчас</span>
+        <strong id="nextStep">подождать</strong>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Символы</h2>
-      <p class="hint">Таблица и карточка ниже используют один backend status_effective без локального пересчета.</p>
-      <table>
-        <thead><tr><th>Символ</th><th>Статус</th><th>Серьезность</th><th>Причины</th><th>Trace</th><th>Разрешенные действия</th></tr></thead>
-        <tbody id="symbolsBody"></tbody>
-      </table>
+    <section class="toolbar-card">
+      <div>
+        <h2>Быстрый тест</h2>
+        <p>Безопасные проверки. Они не открывают live-сделки.</p>
+      </div>
+      <div class="toolbar-actions">
+        <button id="paperRunBtn" class="btn secondary">Paper один раз</button>
+        <button id="toggleDiagBtn" class="btn ghost">Показать диагностику</button>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Детали символа</h2>
-      <pre id="symbolDetails">выберите символ</pre>
+    <section>
+      <div class="section-heading">
+        <div>
+          <h2>Панель допуска</h2>
+          <p>Ключевые gate без сырого JSON и без догадок во frontend.</p>
+        </div>
+      </div>
+      <div id="cards" class="cards-grid"></div>
     </section>
 
-    <section class="card">
-      <h2>Paper-конвейер</h2>
-      <button id="paperRunBtn">Запустить paper один раз</button>
-      <pre id="paperResult">не запускался</pre>
+    <section class="two-column">
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>Что мешает запуску</h2>
+          <p>Исправляйте сверху вниз. Если список пустой, смотрите план перехода.</p>
+        </div>
+        <div id="blockers" class="blocker-list"></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-heading">
+          <h2>Настройки Phase 0</h2>
+          <p>Ограничения малого счета, которые оператор не должен обходить.</p>
+        </div>
+        <dl id="limits" class="limit-list"></dl>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading horizontal">
+        <div>
+          <h2>План перехода от теста к live</h2>
+          <p>Live разрешен только после полного PASS. Заблокированный preflight до этого — нормальное состояние.</p>
+        </div>
+      </div>
+      <div id="steps" class="stepper"></div>
+    </section>
+
+    <section class="symbols-layout">
+      <article class="panel symbols-panel">
+        <div class="panel-heading horizontal">
+          <div>
+            <h2>Символы</h2>
+            <p>Статус берется из backend `status_effective`. Карточка и список используют один объект.</p>
+          </div>
+        </div>
+        <div id="symbols" class="symbol-list"></div>
+      </article>
+
+      <aside class="panel symbol-details">
+        <div class="panel-heading">
+          <h2>Детали символа</h2>
+          <p>Причины и разрешенные действия понятным языком.</p>
+        </div>
+        <div id="symbolDetails" class="empty-state">Выберите символ слева.</div>
+      </aside>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading horizontal">
+        <div>
+          <h2>Безопасные действия оператора</h2>
+          <p>Разрешены только действия, которые снижают риск или не увеличивают его. Открытия сделки из интерфейса нет.</p>
+        </div>
+      </div>
+      <div class="action-form">
+        <label>
+          Ключ оператора
+          <input id="operatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
+        </label>
+        <label>
+          Причина действия
+          <textarea id="actionReason" rows="3" placeholder="Например: testnet-проверка, отмена входов перед рестартом, сверка после incident..."></textarea>
+        </label>
+      </div>
+      <div id="safeActions" class="safe-actions"></div>
+      <div id="actionResult" class="callout hidden"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Результат paper-теста</h2>
+        <p>Здесь показывается краткое резюме последнего запуска. Полный JSON спрятан в диагностике.</p>
+      </div>
+      <div id="paperSummary" class="paper-summary empty-state">Paper еще не запускался.</div>
+    </section>
+
+    <section id="diagnostics" class="panel diagnostics hidden">
+      <div class="panel-heading horizontal">
+        <div>
+          <h2>Техническая диагностика</h2>
+          <p>Для разработчика или администратора. Оператору в обычной работе этот блок не нужен.</p>
+        </div>
+        <button id="copyDiagBtn" class="btn ghost">Копировать</button>
+      </div>
+      <pre id="diagnosticJson">{}</pre>
     </section>
   </main>
 

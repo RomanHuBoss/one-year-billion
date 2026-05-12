@@ -13,7 +13,7 @@ from app.execution.order_router import OrderRouter
 from app.security.startup_guard import validate_startup_security
 from app.db.connection import Database
 from app.db.repository import Repository
-from app.api.routes import health, state, risk, signals, execution, actions, ml, llm, paper, incidents, runtime
+from app.api.routes import health, state, risk, signals, execution, actions, ml, llm, paper, incidents, runtime, operator
 
 
 def _install_database(app: FastAPI, settings: Settings) -> None:
@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
     phase_reasons = startup_phase_validation(runtime_config.raw)
     if phase_reasons:
         raise RuntimeError('unsafe_phase_config:' + ';'.join(phase_reasons))
-    app = FastAPI(title=settings.app_name, version='1.8.0-total-project-check-safety-gated', lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, version='1.9.0-operator-module', lifespan=lifespan)
     app.state.settings = settings
     app.state.runtime_config = runtime_config
     app.state.demo_state = DemoState(symbols=runtime_config.live_universe, phase=runtime_config.phase)
@@ -81,7 +81,7 @@ def create_app() -> FastAPI:
         allow_methods=['*'],
         allow_headers=['*'],
     )
-    for router in [health.router, state.router, risk.router, signals.router, execution.router, actions.router, ml.router, llm.router, paper.router, incidents.router, runtime.router]:
+    for router in [health.router, state.router, risk.router, signals.router, execution.router, actions.router, ml.router, llm.router, paper.router, incidents.router, runtime.router, operator.router]:
         app.include_router(router)
 
     frontend = Path(__file__).resolve().parent.parent / 'frontend'

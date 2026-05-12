@@ -173,3 +173,56 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 - Локальная проверка: `python main.py validate` — 87 tests passed, static architecture checks PASS, migration checks PASS, secret scan PASS.
 
 Статус остается безопасным: кодовая база `technical-live-ready/live-gated`, фактический live — `live-blocked` до PostgreSQL, Bybit runtime checks, paper/shadow evidence и Go/No-Go PASS.
+
+---
+
+## Редакция 5.0 — нормальный операторский модуль
+
+Дата проверки: 2026-05-12.
+
+### Что изменено
+
+- Старый dashboard с сырым JSON заменен на полноценный операторский модуль: крупный статус, понятные карточки допуска, блокеры, план перехода к live, список символов, карточка деталей, безопасные действия и скрытая диагностика для разработчика.
+- Добавлен backend endpoint `GET /api/operator/dashboard`, который формирует человекочитаемую модель интерфейса. Frontend не рассчитывает бизнес-статус и остается только визуальным слоем.
+- Добавлены безопасные action-cards: `DISABLE_TRADING`, `CANCEL_OPEN_ENTRIES`, `FLATTEN_REDUCE`, `RESOLVE_INCIDENT`. Интерфейс требует operator key и причину; открытия сделки из UI нет.
+- Добавлено руководство оператора в Markdown и DOCX: `docs/OPERATOR_MANUAL.md`, `docs/OPERATOR_MANUAL.docx`.
+- Обновлены `README.md` и `docs/RUNBOOK.md` с упоминанием нового операторского модуля.
+- Добавлены regression-тесты `tests/test_operator_module.py`.
+
+### Измененные файлы
+
+- `app/api/routes/operator.py`
+- `app/main.py`
+- `frontend/index.html`
+- `frontend/css/styles.css`
+- `frontend/js/api_client.js`
+- `frontend/js/app.js`
+- `tests/test_operator_module.py`
+- `docs/OPERATOR_MANUAL.md`
+- `docs/OPERATOR_MANUAL.docx`
+- `docs/RUNBOOK.md`
+- `README.md`
+- `DELIVERY_REPORT.md`
+- `TOTAL_PROJECT_CHECK_REPORT.md`
+
+### Проверки редакции 5.0
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 89 passed
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py preflight --mode testnet
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+
+python main.py preflight --mode live
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+### Итог редакции 5.0
+
+Статус проекта остается безопасным: `test-ready`; `paper-ready` после подключения PostgreSQL/runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до PostgreSQL, Bybit runtime checks, paper/shadow evidence и Go/No-Go PASS.

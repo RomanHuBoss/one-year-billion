@@ -189,3 +189,47 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 ### Итог редакции 4.0
 
 Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL/runtime data; `technical-live-ready` как live-gated кодовая база; `live-blocked` до внешних gates.
+
+---
+
+## Редакция 5.0 — операторский модуль и руководство оператора
+
+Дата проверки: 2026-05-12.
+
+### Причина доработки
+
+Предыдущий dashboard был технически корректен, но непригоден как рабочий экран оператора: он показывал сырые JSON-блоки и требовал от пользователя разбираться в структуре backend-ответов. Для реальной эксплуатации оператору нужен понятный экран: что сейчас происходит, почему live заблокирован, что делать дальше и какие действия безопасны.
+
+### Исправления
+
+1. Добавлен `app/api/routes/operator.py`: backend формирует человекочитаемый operator-dashboard model, включая hero-status, readiness cards, blockers, live-transition steps, Phase 0 limits, safe actions и diagnostics.
+2. `app/main.py`: подключен новый operator router.
+3. `frontend/index.html`, `frontend/css/styles.css`, `frontend/js/app.js`: UI полностью переработан. Старые raw JSON panels заменены на современный операторский модуль. Сырой JSON оставлен только в скрытом блоке "Техническая диагностика".
+4. Frontend продолжает использовать backend `status_effective` как источник истины и не рассчитывает торговые статусы, size, leverage или risk budget.
+5. Добавлены безопасные action cards с обязательным `OPERATOR_API_KEY`, reason и idempotency key. UI не содержит кнопки открытия позиции.
+6. Добавлены `docs/OPERATOR_MANUAL.md` и `docs/OPERATOR_MANUAL.docx` с пошаговой инструкцией для оператора.
+7. Добавлены тесты `tests/test_operator_module.py`, которые проверяют endpoint операторской модели и отсутствие старых raw JSON панелей.
+
+### Проверки
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 89 passed
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py preflight --mode testnet
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+
+python main.py preflight --mode live
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+DOCX-руководство сгенерировано и визуально проверено через render_docx: 4 страницы, без обрезки текста, наложений и поврежденных таблиц.
+
+### Итог
+
+Операторский контур стал пригодным для реального тестирования человеком: по экрану понятно, что делать дальше, когда нельзя торговать, какие настройки безопасны, какие проверки обязательны и почему live остается заблокированным до Go/No-Go PASS.

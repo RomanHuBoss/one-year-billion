@@ -1,0 +1,93 @@
+# Руководство оператора
+
+## Назначение
+
+Операторский модуль создан для безопасной работы с Crypto Acceleration System 2026. Он не является торговым терминалом для ручного открытия сделок. Его задача - показать, можно ли тестировать систему, почему live сейчас заблокирован, какие проверки еще нужны и какие безопасные действия доступны оператору.
+
+## Главное правило
+
+Если интерфейс показывает `Live заблокирован`, это не ошибка. До полного Go/No-Go PASS система обязана блокировать live. Оператор не должен искать обходной путь.
+
+## Как открыть модуль
+
+```bash
+python main.py
+```
+
+Затем открыть в браузере:
+
+```text
+http://127.0.0.1:8000/
+```
+
+## Что смотреть первым
+
+1. **Текущее состояние** - крупный верхний блок. Он отвечает на вопрос: можно ли продолжать и что делать следующим шагом.
+2. **Панель допуска** - короткие карточки по торговле, БД, risk engine, live gate, фазе и ML.
+3. **Что мешает запуску** - список причин блокировки. Исправлять сверху вниз.
+4. **План перехода от теста к live** - последовательность проверок.
+5. **Символы** - понятный статус BTCUSDT, ETHUSDT, SOLUSDT.
+6. **Безопасные действия оператора** - только disable/cancel/flatten/resolve. Открытия сделки из интерфейса нет.
+
+## Безопасные стартовые настройки Phase 0
+
+- `TRADING_ENABLED=false`
+- `CAS_ENABLE_LIVE_SUBMIT=false`
+- `BYBIT_LIVE_CONFIRM=false`
+- `BYBIT_TESTNET=true`
+- `CAS_REQUIRE_DB_FOR_LIVE=true`
+- `CAS_REQUIRE_LIVE_PREFLIGHT=true`
+- `CAS_REQUIRE_GO_NOGO_FOR_LIVE=true`
+- `CAS_GO_NOGO_PASS=false`
+- `CAS_DEMO_MODE=false`
+- `CAS_ALLOW_DEMO_ML=false`
+
+Phase 0: только BTCUSDT, ETHUSDT, SOLUSDT. Риск по умолчанию 1%, абсолютный максимум 1.5%, эффективное плечо по умолчанию не выше 3x.
+
+## Проверки перед testnet
+
+```bash
+python main.py validate
+python main.py preflight --mode testnet
+```
+
+`validate` должен пройти без ошибок. `preflight --mode testnet` может вернуть `blocked`, если нет ключей, БД или runtime-доступа. Это нормально: исправьте причины из интерфейса и повторите.
+
+## Paper/shadow
+
+В интерфейсе нажать **Paper один раз** для smoke-проверки конвейера. Для допуска к live нужен не одиночный запуск, а 14+ дней Phase 0 paper/shadow evidence с reconciliation PASS и без unresolved incidents.
+
+## Когда можно переходить к реальной торговле
+
+Только когда выполнено все:
+
+1. `python main.py validate` - PASS.
+2. PostgreSQL поднят, миграции применены.
+3. `python main.py preflight --mode testnet` - PASS.
+4. Накоплено не менее 14 дней Phase 0 paper/shadow evidence.
+5. Нет unresolved CRITICAL/HIGH incidents.
+6. Есть evidence `RECONCILIATION=PASS`, `SECURITY=PASS`, `CI=PASS`.
+7. Есть подписанный `GO_NO_GO=PASS`.
+8. `python main.py preflight --mode live` - PASS.
+9. API-ключи Bybit хранятся только server-side.
+10. Оператор понимает, что HTTP ack от Bybit не является fill; ACTIVE допустим только после reconciliation PASS и protection_state=VALID.
+
+## Что запрещено
+
+- Открывать сделку вручную в обход risk engine.
+- Повторять submit с новым idempotency key после timeout.
+- Увеличивать риск из-за просадки или желания быстрее выйти к цели.
+- Включать carry/stat-arb live в Phase 0/1.
+- Хранить ключи Bybit во frontend или отправлять их в браузер.
+- Считать `blocked` ошибкой интерфейса без анализа причин.
+
+## Аварийные действия
+
+Разрешены только действия, снижающие риск:
+
+- `DISABLE_TRADING` - выключить новые входы.
+- `CANCEL_OPEN_ENTRIES` - отменить открытые входные заявки.
+- `FLATTEN_REDUCE` - уменьшить или закрыть риск через reduce-only.
+- `RESOLVE_INCIDENT` - закрыть инцидент только после проверки.
+
+Каждое действие требует `OPERATOR_API_KEY` и понятную причину.
