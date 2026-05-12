@@ -149,6 +149,10 @@ const REASON_HELP = {
   no_candidate_after_regime_permissions: 'Regime/permission matrix не дала ни одного допустимого кандидата. Это нормально, если рынок неподходящий.',
   database_required_for_live: 'Для live нужна PostgreSQL-БД с миграциями, constraints, audit и evidence.',
   go_no_go_pass_and_approver_required: 'Нужен записанный Go/No-Go PASS с ответственным approver.',
+  bybit_private_api_auth_failed: 'Public API работает, но private API не принял ключ или подпись. Проверьте testnet/live endpoint, ключ, secret, IP whitelist и пробелы в .env.',
+  bybit_wallet_balance_failed: 'Ключ прошел не все private runtime checks. Проверьте account mode Bybit и доступ к wallet-balance.',
+  bybit_positions_failed: 'Ключ не смог прочитать позиции Linear USDT. Проверьте permissions Contract/Derivatives и IP whitelist.',
+  bybit_api_key_trade_permission_not_verified: 'Ключ читается, но права на торговлю Linear/Contract не подтверждены. Для testnet submit нужны Order/Position permissions.',
 };
 
 function escapeHtml(value) {

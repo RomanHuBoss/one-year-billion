@@ -289,3 +289,15 @@ main.py               единая CLI-точка запуска
 - Панель допуска стала компактной status-strip, чтобы не занимать половину экрана.
 - Testnet preflight отделен от live gate: testnet не требует CAS_ENABLE_LIVE_SUBMIT, Go/No-Go и paper evidence.
 - Endpoint операторских команд принимает старые browser text/plain JSON bodies и не возвращает непонятный 422.
+
+### Диагностика Bybit private API в testnet preflight
+
+Если testnet preflight показывает `public_api=true`, `runtime_specs=true`, но `bybit_private_api_verified=false`, проблема почти всегда не в интерфейсе, а в private-доступе Bybit:
+
+- перепутаны testnet/live API keys;
+- неверный `BYBIT_API_SECRET` или лишние пробелы/кавычки в `.env`;
+- IP текущей машины не добавлен в whitelist API-ключа;
+- ключ read-only или без Contract/Derivatives Trade/Order permission;
+- аккаунт/ключ не имеет доступа к Linear USDT positions/wallet endpoints.
+
+В актуальной версии preflight пишет конкретные причины в `reasons` и безопасные детали в `data.bybit_private_errors`: `ret_code`, `ret_msg`, `path`, `check`. Секреты и ключи туда не выводятся. После правки `.env` перезапустите backend и повторите `python main.py preflight --mode testnet`.

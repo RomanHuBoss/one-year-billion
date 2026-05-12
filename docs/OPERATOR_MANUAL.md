@@ -175,3 +175,34 @@ python main.py preflight --mode testnet
 `python main.py preflight --mode testnet` теперь проверяет именно testnet readiness. Он не должен требовать `CAS_ENABLE_LIVE_SUBMIT`, live Go/No-Go и 14 дней paper evidence. Если testnet preflight заблокирован, причины должны быть уровня: нет PostgreSQL, нет testnet Bybit credentials, не выбран testnet endpoint, не применены migrations или есть unresolved incidents.
 
 `python main.py preflight --mode live` остается строгим live gate и обязан требовать DB, Bybit runtime, paper/shadow evidence, security/CI/reconciliation evidence, signed Go/No-Go и отсутствие unresolved CRITICAL/HIGH.
+
+## Testnet preflight: public OK, private API заблокирован
+
+Если `python main.py preflight --mode testnet` показывает примерно такое:
+
+```json
+{
+  "status": "blocked",
+  "reasons": ["bybit_private_api_auth_failed:..."],
+  "checks": {
+    "bybit_public_api_reachable": true,
+    "runtime_instrument_specs_verified": true,
+    "bybit_private_api_verified": false,
+    "bybit_api_key_trade_permission_verified": false
+  }
+}
+```
+
+это значит: публичная часть Bybit доступна, спецификации BTC/ETH/SOL прочитаны, но private API не подтвердил ключи или permissions. Это не ошибка frontend и не причина включать live вручную.
+
+Что делать оператору:
+
+1. Убедиться, что `BYBIT_TESTNET=true`.
+2. Проверить, что `BYBIT_API_KEY` и `BYBIT_API_SECRET` созданы именно в Bybit testnet, а не в live-кабинете.
+3. Проверить, что в `.env` нет лишних пробелов, кавычек и переносов строк в ключах.
+4. Проверить IP whitelist ключа Bybit: IP текущего ПК/VPS должен быть разрешен.
+5. Проверить права API-ключа: для testnet runtime нужны Linear/Contract/Derivatives права на чтение wallet/positions и trade/order permission для дальнейших testnet-сценариев.
+6. Перезапустить backend после изменения `.env`.
+7. Повторить `Testnet preflight` из интерфейса.
+
+Актуальная версия preflight показывает не общий `RuntimeError`, а конкретные причины: `bybit_private_api_auth_failed`, `bybit_wallet_balance_failed`, `bybit_positions_failed`, `bybit_api_key_trade_permission_not_verified`, а также безопасную диагностику `ret_code`, `ret_msg`, `path` без вывода секретов.

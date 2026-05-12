@@ -34,6 +34,11 @@ REASON_LABELS = {
     'cas_enable_live_submit_false': 'Live-submit явно выключен',
     'trading_flags_or_bybit_credentials_missing': 'Не заданы live-флаги или ключи Bybit',
     'cannot_verify_unresolved_incidents_without_db': 'Без БД нельзя проверить CRITICAL/HIGH incidents',
+    'bybit_private_api_auth_failed': 'Bybit private API не принял ключ/подпись',
+    'bybit_wallet_balance_failed': 'Bybit wallet-balance недоступен для этих ключей/account mode',
+    'bybit_positions_failed': 'Bybit position-list недоступен для этих ключей/permissions',
+    'bybit_api_key_trade_permission_not_verified': 'У ключа Bybit не подтверждены права Contract/Derivatives Trade/Order',
+    'bybit_positions_response_without_result': 'Bybit position-list вернул ответ без result',
 }
 
 ACTION_INFO = {
@@ -320,7 +325,7 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
     data = {
         'source_of_truth': 'backend_status_effective',
         'app': settings.app_name,
-        'version': 'operator-module-v4-compact-command-plan',
+        'version': 'operator-module-v5-bybit-private-diagnostics',
         'operator_mode': 'live_requested' if settings.live_requested else 'local_or_testnet_safe',
         'hero': _top_banner(request, runtime_result),
         'cards': _readiness_cards(request, runtime_result),

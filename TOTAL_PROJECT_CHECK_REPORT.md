@@ -260,3 +260,7 @@ Acceptance evidence:
 - live-submit этим механизмом не включается и не обходится.
 
 Статус проверки: `python main.py validate` — PASS, 93 теста пройдены.
+
+## Дополнение: диагностика Bybit private API
+
+Блокировка testnet preflight с public API OK и private API FAIL теперь не маскируется как `RuntimeError`. Preflight возвращает конкретную безопасную диагностику по endpoint/check и operator hints. Это сохраняет fail-closed поведение и делает операторский экран понятным для исправления testnet keys/permissions/IP whitelist.

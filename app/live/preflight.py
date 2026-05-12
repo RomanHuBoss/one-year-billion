@@ -20,7 +20,7 @@ def _safe_repository_call(reasons: list[str], data: dict[str, Any], check_name: 
         data[f'{check_name}_error'] = f'{type(exc).__name__}:{exc}'
         return default
 from app.core.settings import Settings
-from app.execution.bybit_adapter import BybitAdapter, BybitConfig
+from app.execution.bybit_adapter import BybitAdapter, BybitConfig, BybitAPIError
 
 
 @dataclass
@@ -94,6 +94,73 @@ def build_adapter(settings: Settings) -> BybitAdapter:
     ))
 
 
+
+def _safe_bybit_error(exc: Exception) -> dict[str, Any]:
+    """Возвращает безопасную для UI диагностику без ключей/секретов."""
+
+    if isinstance(exc, BybitAPIError):
+        return exc.safe_dict()
+    return {
+        'code': type(exc).__name__,
+        'ret_code': None,
+        'ret_msg': str(exc),
+        'path': None,
+        'http_status': None,
+    }
+
+
+def _bybit_reason(prefix: str, exc: Exception) -> str:
+    if isinstance(exc, BybitAPIError):
+        return f'{prefix}:{exc.reason_code()}'
+    return f'{prefix}:{type(exc).__name__}'
+
+
+def _operator_hint_for_bybit_private_errors(errors: list[dict[str, Any]]) -> list[str]:
+    """Конкретные действия оператора при падении private API.
+
+    Public API может работать, а private API — нет. В этом случае проблема почти
+    всегда в ключах/секрете, endpoint testnet/live, IP whitelist или permission.
+    """
+
+    if not errors:
+        return []
+    hints = [
+        'Проверьте, что BYBIT_TESTNET=true и ключи созданы именно в Bybit testnet, а не в live-кабинете.',
+        'Проверьте BYBIT_API_KEY/BYBIT_API_SECRET: без пробелов, переносов строк и кавычек в .env.',
+        'Проверьте IP whitelist ключа Bybit: текущий IP/VPS должен быть разрешен.',
+        'Проверьте права ключа: для Linear USDT Futures нужны contract/derivatives trade/order permissions.',
+        'После исправления перезапустите backend и повторите Testnet preflight.',
+    ]
+    if any(str(err.get('ret_code')) in {'10003', '10004', '10005', '10007'} for err in errors):
+        hints.insert(0, 'retCode похож на проблему ключа/подписи/permissions: чаще всего перепутаны testnet/live keys или неверный secret.')
+    return hints
+
+
+def _try_wallet_balance(adapter: BybitAdapter) -> tuple[dict[str, Any], str]:
+    """Проверяет wallet-balance с fallback UNIFIED -> CONTRACT.
+
+    На разных testnet-аккаунтах Bybit accountType может отличаться. Preflight не
+    должен скрывать это как RuntimeError, поэтому пробуем безопасный fallback и
+    возвращаем использованный account_type.
+    """
+
+    first_error: Exception | None = None
+    for account_type in ('UNIFIED', 'CONTRACT'):
+        try:
+            return adapter.get_wallet_balance(account_type=account_type), account_type
+        except TypeError as exc:
+            # Некоторые test doubles из старых тестов реализуют метод без
+            # keyword-аргумента. Это не должно ломать production helper.
+            if 'account_type' in str(exc):
+                return adapter.get_wallet_balance(), 'UNIFIED'
+            if first_error is None:
+                first_error = exc
+        except Exception as exc:  # pragma: no cover - зависит от внешнего Bybit account mode.
+            if first_error is None:
+                first_error = exc
+    assert first_error is not None
+    raise first_error
+
 def _run_bybit_runtime_checks(settings: Settings, runtime, reasons: list[str], checks: dict[str, bool], data: dict[str, Any], adapter: BybitAdapter | None = None) -> None:
     """Проверяет Bybit runtime без отправки ордеров."""
 
@@ -124,23 +191,61 @@ def _run_bybit_runtime_checks(settings: Settings, runtime, reasons: list[str], c
     checks['runtime_instrument_specs_verified'] = not runtime_spec_reasons
     data['runtime_specs'] = runtime_specs
 
+    private_errors: list[dict[str, Any]] = []
+    key_info: dict[str, Any] | None = None
     try:
-        account = adapter.get_wallet_balance()
-        positions = adapter.get_positions()
         key_info = adapter.get_api_key_info()
-        data['account_runtime_check'] = 'ok'
-        data['account_mode_hint'] = (account.get('result') or {}).get('list', [{}])[0].get('accountType') if account.get('result') else None
-        data['positions_runtime_check'] = 'ok' if positions.get('result') is not None else 'unknown'
         checks['bybit_private_api_verified'] = True
+        data['bybit_private_auth_check'] = 'ok'
+    except Exception as exc:
+        checks['bybit_private_api_verified'] = False
+        error = _safe_bybit_error(exc)
+        error['check'] = 'query_api_key'
+        private_errors.append(error)
+        reasons.append(_bybit_reason('bybit_private_api_auth_failed', exc))
+
+    if key_info is not None:
         checks['bybit_api_key_trade_permission_verified'] = _api_key_permissions_allow_linear_trade(key_info)
         if not checks['bybit_api_key_trade_permission_verified']:
             reasons.append('bybit_api_key_trade_permission_not_verified')
-        checks['bybit_private_api_and_permissions_verified'] = checks['bybit_private_api_verified'] and checks['bybit_api_key_trade_permission_verified']
-    except Exception as exc:
-        checks['bybit_private_api_verified'] = False
+    else:
         checks['bybit_api_key_trade_permission_verified'] = False
-        checks['bybit_private_api_and_permissions_verified'] = False
-        reasons.append(f'bybit_private_api_or_permissions_failed:{type(exc).__name__}')
+
+    try:
+        account, account_type = _try_wallet_balance(adapter)
+        data['account_runtime_check'] = 'ok'
+        data['account_mode_checked'] = account_type
+        data['account_mode_hint'] = (account.get('result') or {}).get('list', [{}])[0].get('accountType') if account.get('result') else account_type
+        checks['bybit_wallet_balance_verified'] = True
+    except Exception as exc:
+        checks['bybit_wallet_balance_verified'] = False
+        error = _safe_bybit_error(exc)
+        error['check'] = 'wallet_balance'
+        private_errors.append(error)
+        reasons.append(_bybit_reason('bybit_wallet_balance_failed', exc))
+
+    try:
+        positions = adapter.get_positions()
+        data['positions_runtime_check'] = 'ok' if positions.get('result') is not None else 'unknown'
+        checks['bybit_positions_verified'] = positions.get('result') is not None
+        if not checks['bybit_positions_verified']:
+            reasons.append('bybit_positions_response_without_result')
+    except Exception as exc:
+        checks['bybit_positions_verified'] = False
+        error = _safe_bybit_error(exc)
+        error['check'] = 'position_list'
+        private_errors.append(error)
+        reasons.append(_bybit_reason('bybit_positions_failed', exc))
+
+    checks['bybit_private_api_and_permissions_verified'] = (
+        checks.get('bybit_private_api_verified')
+        and checks.get('bybit_api_key_trade_permission_verified')
+        and checks.get('bybit_wallet_balance_verified')
+        and checks.get('bybit_positions_verified')
+    )
+    if private_errors:
+        data['bybit_private_errors'] = private_errors
+        data['operator_private_api_hint'] = _operator_hint_for_bybit_private_errors(private_errors)
 
 
 def _check_unresolved_incidents(settings: Settings, repository, reasons: list[str], checks: dict[str, bool], data: dict[str, Any]) -> None:

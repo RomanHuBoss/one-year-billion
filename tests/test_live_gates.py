@@ -176,3 +176,33 @@ def test_testnet_preflight_does_not_require_live_submit_or_go_no_go():
     assert 'cas_enable_live_submit_false' not in result.reasons
     assert 'go_no_go_pass_and_approver_required' not in result.reasons
     assert result.data['go_no_go_required_for_testnet'] is False
+
+class FakeAdapterPrivateAuthFails(FakeAdapterOK):
+    def get_api_key_info(self):
+        from app.execution.bybit_adapter import BybitAPIError
+        raise BybitAPIError('bybit_request_rejected', 'invalid api key', ret_code=10003, ret_msg='invalid api key', path='/v5/user/query-api')
+
+    def get_wallet_balance(self, account_type='UNIFIED'):
+        from app.execution.bybit_adapter import BybitAPIError
+        raise BybitAPIError('bybit_request_rejected', 'invalid api key', ret_code=10003, ret_msg='invalid api key', path='/v5/account/wallet-balance')
+
+    def get_positions(self):
+        from app.execution.bybit_adapter import BybitAPIError
+        raise BybitAPIError('bybit_request_rejected', 'invalid api key', ret_code=10003, ret_msg='invalid api key', path='/v5/position/list')
+
+
+def test_testnet_preflight_explains_private_bybit_failure_without_plain_runtimeerror():
+    runtime = build_runtime_config()
+    settings = Settings(
+        bybit_testnet=True,
+        bybit_api_key='k',
+        bybit_api_secret='s',
+        require_go_nogo_for_live=True,
+        require_live_preflight=True,
+    )
+    result = run_live_preflight(settings, runtime, db_available=True, repository=FakeRepo(), adapter=FakeAdapterPrivateAuthFails(), mode='testnet')
+    assert result.status == 'blocked'
+    assert 'bybit_private_api_or_permissions_failed:RuntimeError' not in result.reasons
+    assert any(reason.startswith('bybit_private_api_auth_failed:bybit_request_rejected_10003') for reason in result.reasons)
+    assert result.data['bybit_private_errors'][0]['ret_code'] == 10003
+    assert result.data['operator_private_api_hint']

@@ -7,6 +7,47 @@ from app.core.hashes import hash_payload
 from app.execution.rate_limiter import TokenBucketRateLimiter
 
 
+class BybitAPIError(RuntimeError):
+    """Нормализованная ошибка Bybit для preflight и операторского интерфейса.
+
+    В message нет ключей/секретов. Ошибка сохраняет retCode/retMsg/path, чтобы
+    оператор видел причину блокировки вместо общего RuntimeError.
+    """
+
+    def __init__(self, code: str, message: str = '', *, ret_code: Any = None, ret_msg: str | None = None, path: str | None = None, http_status: int | None = None):
+        self.code = code
+        self.ret_code = ret_code
+        self.ret_msg = ret_msg or message
+        self.path = path
+        self.http_status = http_status
+        parts = [code]
+        if ret_code is not None:
+            parts.append(str(ret_code))
+        if self.ret_msg:
+            parts.append(str(self.ret_msg))
+        if path:
+            parts.append(f'path={path}')
+        if http_status is not None:
+            parts.append(f'http={http_status}')
+        super().__init__(':'.join(parts))
+
+    def reason_code(self) -> str:
+        if self.ret_code is not None:
+            return f'{self.code}_{self.ret_code}'
+        if self.http_status is not None:
+            return f'{self.code}_http_{self.http_status}'
+        return self.code
+
+    def safe_dict(self) -> dict[str, Any]:
+        return {
+            'code': self.code,
+            'ret_code': self.ret_code,
+            'ret_msg': self.ret_msg,
+            'path': self.path,
+            'http_status': self.http_status,
+        }
+
+
 @dataclass(frozen=True)
 class BybitConfig:
     api_key: str
@@ -31,7 +72,7 @@ class BybitAdapter:
     def _guard_rate_limit(self) -> None:
         if not self.limiter.allow():
             self.degraded_reason = 'local_rate_limiter_open'
-            raise RuntimeError('exchange_degraded:local_rate_limiter_open')
+            raise BybitAPIError('exchange_degraded', 'local_rate_limiter_open')
 
     def _sign(self, timestamp: str, recv_window: str, payload: str) -> str:
         raw = f'{timestamp}{self.cfg.api_key}{recv_window}{payload}'
@@ -48,19 +89,19 @@ class BybitAdapter:
             'Content-Type': 'application/json',
         }
 
-    def _raise_if_bybit_degraded(self, payload: dict[str, Any]) -> None:
+    def _raise_if_bybit_degraded(self, payload: dict[str, Any], path: str | None = None) -> None:
         ret_code = payload.get('retCode')
         if ret_code in {429, 10006}:
             self.degraded_reason = f'bybit_rate_limit:{ret_code}'
-            raise RuntimeError(self.degraded_reason)
+            raise BybitAPIError('exchange_degraded', payload.get('retMsg', 'rate_limit'), ret_code=ret_code, ret_msg=payload.get('retMsg'), path=path)
 
-    def _raise_if_bybit_rejected(self, payload: dict[str, Any]) -> None:
+    def _raise_if_bybit_rejected(self, payload: dict[str, Any], path: str | None = None) -> None:
         """Любой retCode != 0 не должен выглядеть как успешный submit."""
 
         ret_code = payload.get('retCode')
         if ret_code not in (0, '0', None):
             message = payload.get('retMsg', 'unknown')
-            raise RuntimeError(f'bybit_request_rejected:{ret_code}:{message}')
+            raise BybitAPIError('bybit_request_rejected', message, ret_code=ret_code, ret_msg=message, path=path)
 
     def _public_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self._guard_rate_limit()
@@ -68,16 +109,19 @@ class BybitAdapter:
             r = client.get(f'{self.cfg.base_url}{path}', params=params or {})
             if r.status_code == 429:
                 self.degraded_reason = 'http_429'
-                raise RuntimeError('exchange_degraded:http_429')
-            r.raise_for_status()
+                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
+            try:
+                r.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
             data = r.json()
-            self._raise_if_bybit_degraded(data)
-            self._raise_if_bybit_rejected(data)
+            self._raise_if_bybit_degraded(data, path=path)
+            self._raise_if_bybit_rejected(data, path=path)
             return data
 
     def _private_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         if not self.cfg.api_key or not self.cfg.api_secret:
-            raise RuntimeError('bybit_credentials_missing')
+            raise BybitAPIError('bybit_credentials_missing', path=path)
         self._guard_rate_limit()
         params = params or {}
         query = '&'.join(f'{k}={v}' for k, v in sorted(params.items()) if v is not None)
@@ -86,27 +130,33 @@ class BybitAdapter:
             r = client.get(f'{self.cfg.base_url}{path}', params=params, headers=headers)
             if r.status_code == 429:
                 self.degraded_reason = 'http_429'
-                raise RuntimeError('exchange_degraded:http_429')
-            r.raise_for_status()
+                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
+            try:
+                r.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
             data = r.json()
-            self._raise_if_bybit_degraded(data)
-            self._raise_if_bybit_rejected(data)
+            self._raise_if_bybit_degraded(data, path=path)
+            self._raise_if_bybit_rejected(data, path=path)
             return data
 
     def _private_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         if not self.cfg.api_key or not self.cfg.api_secret:
-            raise RuntimeError('bybit_credentials_missing')
+            raise BybitAPIError('bybit_credentials_missing', path=path)
         self._guard_rate_limit()
         body = json.dumps(payload, separators=(',', ':'), ensure_ascii=False)
         with httpx.Client(timeout=10) as client:
             r = client.post(f'{self.cfg.base_url}{path}', content=body, headers=self._headers(body))
             if r.status_code == 429:
                 self.degraded_reason = 'http_429'
-                raise RuntimeError('exchange_degraded:http_429')
-            r.raise_for_status()
+                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
+            try:
+                r.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
             data = r.json()
-            self._raise_if_bybit_degraded(data)
-            self._raise_if_bybit_rejected(data)
+            self._raise_if_bybit_degraded(data, path=path)
+            self._raise_if_bybit_rejected(data, path=path)
             return data
 
     def get_server_time(self) -> dict[str, Any]:

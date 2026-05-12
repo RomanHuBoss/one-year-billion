@@ -163,3 +163,19 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 3. Запускайте `validate`, `testnet preflight`, `PostgreSQL migrations` и `live preflight` кнопками прямо на карточках плана.
 4. `testnet preflight` не требует live-submit и Go/No-Go. Если он blocked, исправляйте причины testnet/DB/runtime.
 5. `live preflight` до full PASS обязан оставаться blocked. Это нормальное fail-closed состояние.
+
+## Разбор блокировки `bybit_private_api_*` в testnet
+
+Симптом: public API reachable, runtime specs verified, но private API или permissions false.
+
+Порядок действий:
+
+1. Проверить `BYBIT_TESTNET=true`.
+2. Проверить, что ключ создан в testnet Bybit, а не live Bybit.
+3. Скопировать `ret_code`, `ret_msg`, `path` из `data.bybit_private_errors`.
+4. Проверить IP whitelist ключа.
+5. Проверить permissions: Linear/Contract/Derivatives, Order/Trade, Positions/Wallet.
+6. Перезапустить backend после правки `.env`.
+7. Повторить Testnet preflight.
+
+До исчезновения этих причин testnet readiness считается BLOCKED. Это правильное fail-closed состояние.

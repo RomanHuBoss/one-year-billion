@@ -326,3 +326,26 @@ python main.py validate
 - Исправлен тест startup guard, чтобы он не зависел от локального `OPERATOR_API_KEY` оператора.
 - Testnet preflight отделен от live gate: больше не требует live-submit, Go/No-Go и 14+ дней paper evidence.
 - Локальная проверка: `98 passed`, architecture checks, migration checks and secret scan PASS.
+
+## Редакция: bybit private diagnostics
+
+Исправлена непрозрачная блокировка `bybit_private_api_or_permissions_failed:RuntimeError` в testnet preflight.
+
+Изменения:
+- добавлен `BybitAPIError` с безопасными полями `ret_code`, `ret_msg`, `path`, `http_status`;
+- private runtime checks разделены на auth/query-api, wallet-balance, positions и trade permissions;
+- wallet-balance получает fallback `UNIFIED -> CONTRACT` для разных account mode;
+- testnet/live preflight возвращает конкретные reasons: `bybit_private_api_auth_failed`, `bybit_wallet_balance_failed`, `bybit_positions_failed`, `bybit_api_key_trade_permission_not_verified`;
+- оператор получает `data.bybit_private_errors` и `data.operator_private_api_hint` без вывода секретов;
+- обновлены README, RUNBOOK и руководство оператора.
+
+Проверка:
+
+```text
+python main.py validate
+99 passed
+compileall: PASS
+architecture checks: PASS
+migration checks: PASS
+secret scan: PASS
+```
