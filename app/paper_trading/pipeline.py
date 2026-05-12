@@ -14,7 +14,7 @@ class PaperPipeline:
         self.state = state
         self.runtime_config = runtime_config
         self.regime = RegimeClassifier()
-        self.strategies = StrategyOrchestrator()
+        self.strategies = StrategyOrchestrator(include_shadow=True)
         self.ml = MLGate(allow_demo_ml=allow_demo_ml)
         self.router = OrderRouter()
 
@@ -49,6 +49,18 @@ class PaperPipeline:
                 decisions.append({'symbol': symbol, 'status': 'no_trade', 'regime': reg.model_dump(mode='json'), 'reasons': ['no_candidate_after_regime_permissions']})
                 continue
             for cand in proposed:
+                if cand.shadow_only:
+                    if cand.strategy not in shadow_strategies:
+                        decisions.append({'symbol': symbol, 'strategy': cand.strategy, 'status': 'blocked', 'reasons': ['shadow_strategy_not_in_config']})
+                        continue
+                    decisions.append({
+                        'symbol': symbol,
+                        'strategy': cand.strategy,
+                        'status': 'shadow_signal',
+                        'candidate': cand.model_dump(mode='json'),
+                        'reasons': ['shadow_only_no_live_execution_path'],
+                    })
+                    continue
                 strategy_check = validate_strategy_for_phase(cand.strategy, phase, live_strategies, shadow_strategies)
                 if not strategy_check.allowed:
                     decisions.append({'symbol': symbol, 'strategy': cand.strategy, 'status': 'blocked', 'reasons': strategy_check.reasons})

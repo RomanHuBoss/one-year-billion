@@ -56,7 +56,7 @@
 - Добавлена миграция `migrations/0003_hard_invariants.sql`, которая усиливает защиту от прямого SQL bypass: approved risk decision требует положительных sizing values, order qty/notional не может превышать approved sizing, signal/risk `feature_hash` должен совпадать, shadow/rejected signal не имеет live-route.
 - Усилены DB constraints для `signals`, `positions` и `manual_request_log`: запрещены продуктовые стратегии, trade-candidate требует lineage/evidence, ACTIVE position не может быть flat/zero-qty, config activation/proposal не может повышать риск.
 - `scripts/bootstrap_db.sh` теперь применяет все core-миграции автоматически и не применяет demo-seed без явного `CAS_SEED_DEMO_DATA=true`.
-- Добавлены static regression-тесты `tests/test_migration_hard_invariants_static.py`; общий локальный набор вырос до 80 тестов.
+- Добавлены static regression-тесты `tests/test_migration_hard_invariants_static.py`; общий локальный набор вырос до 87 тестов.
 
 ## Что было реализовано ранее и сохранено
 
@@ -82,7 +82,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-84 passed
+87 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present
@@ -143,11 +143,11 @@ OK: no obvious secrets
 
 ```text
 python -m pytest -q
-84 passed
+87 passed
 
 python main.py validate
 compileall: PASS
-pytest: 84 passed
+pytest: 87 passed
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -160,3 +160,16 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 ### Итог редакции 3.0
 
 Статус не меняется: `test-ready`, `paper-ready` после подключения PostgreSQL/runtime data, `technical-live-ready` как live-gated кодовая база, `live-blocked` до внешних gates.
+
+
+---
+
+## Редакция 4.0 — shadow/paper evidence hardening
+
+- `CarryShadowScanner` и `StatArbShadowScanner` перестали быть пустыми заглушками: теперь они генерируют только `shadow_only=True` candidates для paper/shadow evidence.
+- `StrategyOrchestrator(include_shadow=True)` используется только в paper pipeline; обычный live-orchestrator не добавляет shadow strategies.
+- `PaperPipeline` сохраняет shadow decisions как `status=shadow_signal` и не передает их в `risk_engine`/`order_router`.
+- Добавлены тесты `tests/test_shadow_scanners.py`: shadow candidates не имеют live route, risk gate возвращает `strategy_shadow_only`, order router возвращает `shadow_signal_has_no_live_route`.
+- Локальная проверка: `python main.py validate` — 87 tests passed, static architecture checks PASS, migration checks PASS, secret scan PASS.
+
+Статус остается безопасным: кодовая база `technical-live-ready/live-gated`, фактический live — `live-blocked` до PostgreSQL, Bybit runtime checks, paper/shadow evidence и Go/No-Go PASS.

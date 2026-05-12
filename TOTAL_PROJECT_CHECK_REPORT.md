@@ -52,7 +52,7 @@ python main.py validate
 
 ```text
 compileall: PASS
-pytest: 84 passed
+pytest: 87 passed
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -135,11 +135,11 @@ feat: подготовить проект к test/live-ready состоянию 
 
 ```text
 python -m pytest -q
-84 passed
+87 passed
 
 python main.py validate
 compileall: PASS
-pytest: 84 passed
+pytest: 87 passed
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -152,3 +152,40 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 ### Итог редакции 3.0
 
 Статус не меняется: `test-ready`, `paper-ready` после подключения PostgreSQL/runtime data, `technical-live-ready` как live-gated кодовая база, `live-blocked` до внешних gates.
+
+
+---
+
+## Редакция 4.0 — shadow scanners и paper/shadow evidence
+
+Дата проверки: 2026-05-12.
+
+### Найденные и исправленные дефекты
+
+1. `app/strategies/carry_shadow.py`: scanner больше не является пустой заглушкой. Он генерирует только `shadow_only=True` кандидаты для измерения funding/carry edge, с evidence, stop-proxy, invalidator и явной пометкой отсутствия live-route в Phase 0/1.
+2. `app/strategies/statarb_shadow.py`: scanner теперь создает только `shadow_only=True` кандидаты для накопления контекста pair stat-arb в RANGE/LOW_VOL без двухногого исполнения.
+3. `app/strategies/orchestrator.py`: добавлен режим `include_shadow`, чтобы runtime live-orchestrator оставался без shadow-маршрута, а paper/shadow pipeline мог собирать evidence.
+4. `app/paper_trading/pipeline.py`: shadow-кандидаты больше не отправляются в risk/execution, а фиксируются как `status=shadow_signal` с reason `shadow_only_no_live_execution_path`.
+5. `tests/test_shadow_scanners.py`: добавлены regression-тесты, подтверждающие, что shadow scanners генерируют только shadow-кандидаты и что такой candidate не может пройти risk/order route.
+
+### Проверки редакции 4.0
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 87 passed
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py preflight --mode testnet
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+
+python main.py preflight --mode live
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+### Итог редакции 4.0
+
+Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL/runtime data; `technical-live-ready` как live-gated кодовая база; `live-blocked` до внешних gates.
