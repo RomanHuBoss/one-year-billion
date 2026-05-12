@@ -85,6 +85,15 @@ class MarketSnapshot(BaseModel):
     volume_z: float = 0.0
     oi_delta_pct: float = 0.0
     btc_aligned: bool = True
+    # Strategy evidence flags are computed from closed candles/features before decision time.
+    # Defaults are conservative: no explicit confirmation -> no breakout candidate.
+    structure_break: bool = False
+    donchian_break: bool = False
+    atr_expansion: bool = False
+    oi_sanity: bool = True
+    funding_sanity: bool = True
+    range_width_bps: float | None = None
+    adx: float | None = None
     fetched_at: datetime
     expires_at: datetime
 

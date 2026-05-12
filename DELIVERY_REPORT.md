@@ -78,3 +78,12 @@ OK: no obvious secrets
 ## Ограничения вне песочницы
 
 Перед реальной торговлей оператор обязан поднять PostgreSQL, применить migrations, настроить Bybit keys, пройти `python main.py preflight --mode testnet`, накопить paper/shadow evidence, записать evidence в PostgreSQL, затем отдельно пройти `python main.py preflight --mode live` для production endpoint.
+
+
+## Total project check — дополнительная редакция
+
+- Усилен `RegimeClassifier`: нормативный priority order, safer mixed regime, immediate kill-switch, hysteresis и cooldown.
+- Усилен `LimitedBreakoutStrategy`: SignalCandidate появляется только при structure/Donchian break, volume_z, ATR expansion, BTC alignment, OI sanity и funding sanity.
+- Усилен `MicroGridStrategy`: hard stop, max_inventory=1, no_add_after_invalidation, ADX/funding gates; grid не становится DCA/martingale.
+- Входные ордера `OrderRouter` теперь maker-only `PostOnly` по умолчанию; reduce-only market payload получает `closeOnTrigger` where applicable.
+- Добавлены regression-тесты `tests/test_regime_classifier.py` и `tests/test_strategy_gates.py`.

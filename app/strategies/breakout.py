@@ -7,23 +7,39 @@ from app.strategies.base import Strategy
 
 class LimitedBreakoutStrategy(Strategy):
     name = 'breakout'
-    version = '1.0.0'
+    version = '1.1.0-total-check'
+
+    def _confirmed(self, market: MarketSnapshot) -> tuple[bool, dict[str, bool | float]]:
+        evidence = {
+            'structure_or_donchian_break': bool(market.structure_break or market.donchian_break),
+            'volume_z_ok': market.volume_z >= 2.0,
+            'atr_expansion_ok': bool(market.atr_expansion or market.atr_pct >= 0.012),
+            'btc_alignment_ok': bool(market.btc_aligned),
+            'oi_sanity_ok': bool(market.oi_sanity),
+            'funding_sanity_ok': bool(market.funding_sanity),
+            'spread_bps': market.spread_bps,
+            'depth_usdt': market.depth_usdt,
+        }
+        boolean_keys = [k for k, v in evidence.items() if isinstance(v, bool)]
+        return all(bool(evidence[k]) for k in boolean_keys), evidence
 
     def propose(self, market: MarketSnapshot, account: AccountSnapshot, regime: RegimeDecision) -> list[SignalCandidate]:
         if regime.regime not in {Regime.TREND_UP, Regime.TREND_DOWN, Regime.HIGH_VOL}:
             return []
-        if market.volume_z < 2.0 or market.atr_pct < 0.012 or not market.btc_aligned:
+        confirmed, evidence = self._confirmed(market)
+        if not confirmed:
             return []
         side = Side.BUY if regime.regime != Regime.TREND_DOWN else Side.SELL
         entry = market.ask1 if side == Side.BUY else market.bid1
         stop = entry * (0.985 if side == Side.BUY else 1.015)
-        evidence = {'volume_z': market.volume_z, 'atr_pct': market.atr_pct, 'btc_aligned': market.btc_aligned}
+        evidence = {**evidence, 'regime': regime.regime.value, 'required_confirmations': 'structure/donchian+volume_z+atr_expansion+btc+oi+funding'}
         feature_hash = hash_payload({'symbol': market.symbol, 'strategy': self.name, 'evidence': evidence})
         return [SignalCandidate(
             signal_id=str(uuid4()), strategy=self.name, symbol=market.symbol, side=side,
             entry_price=entry, stop_price=stop, invalidator='failed_breakout_or_btc_alignment_lost',
             expected_gross_edge_bps=35.0, expected_holding_time_sec=3600,
-            required_data=['closed_candles','orderbook','open_interest','funding'], regime_id=regime.regime_id,
+            required_data=['closed_candles','donchian_or_structure_break','volume_z','atr_expansion','orderbook','open_interest','funding','btc_alignment'],
+            regime_id=regime.regime_id, feature_id=str(uuid4()),
             trace_id=new_trace_id('sig'), strategy_version=self.version, feature_hash=feature_hash,
             evidence=evidence, requires_ml=True, shadow_only=False,
         )]

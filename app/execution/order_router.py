@@ -45,7 +45,9 @@ class OrderRouter:
         client_order_id = deterministic_order_link_id(signal.signal_id, risk.risk_decision_id, 'entry')
         intent = OrderIntent(
             order_id=str(uuid4()), signal_id=signal.signal_id, risk_decision_id=risk.risk_decision_id,
-            client_order_id=client_order_id, symbol=signal.symbol, side=signal.side, order_type='Limit',
+            # Входы по умолчанию PostOnly: если биржа отменила maker-only заявку,
+            # это обрабатывается state machine/reconciliation, а не скрытым taker fill.
+            client_order_id=client_order_id, symbol=signal.symbol, side=signal.side, order_type='PostOnly',
             qty=risk.sizing.qty, price=signal.entry_price, reduce_only=False, state=OrderState.APPROVED,
             idempotency_key=idempotency_key, trace_id=signal.trace_id,
         )
@@ -68,6 +70,7 @@ class OrderRouter:
             'price': str(intent.price) if intent.price else None,
             'timeInForce': 'PostOnly' if intent.order_type == 'PostOnly' else 'GTC',
             'reduceOnly': intent.reduce_only,
+            'closeOnTrigger': True if intent.reduce_only and intent.order_type == 'Market' else None,
             'orderLinkId': intent.client_order_id,
         }
         return {k: v for k, v in payload.items() if v is not None}

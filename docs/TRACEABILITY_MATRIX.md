@@ -21,3 +21,6 @@
 | Reserve cash учитывает initial margin | `app/risk_engine/position_sizing.py` вычитает conservative initial margin | `tests/test_risk_engine.py::test_reserve_cash_uses_initial_margin_not_only_costs` |
 | Daily/weekly/portfolio caps hard gate | `app/risk_engine/approval.py`, `AccountSnapshot` | `tests/test_risk_engine.py::test_daily_and_weekly_remaining_risk_are_hard_caps`, `tests/test_risk_engine.py::test_portfolio_abs_exposure_cap_blocks_candidate` |
 | Redaction покрывает Bybit/API secret variants | `app/security/redaction.py` | `tests/test_redaction.py` |
+
+| CF-12: regime flip-flop / mixed regime | `app/regime/classifier.py` | `tests/test_regime_classifier.py` |
+| CF-06 / STRAT: breakout/grid safety evidence | `app/strategies/breakout.py`, `app/strategies/micro_grid.py` | `tests/test_strategy_gates.py` |
