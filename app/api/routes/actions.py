@@ -9,6 +9,8 @@ from app.security.auth import require_operator
 router = APIRouter(prefix='/api/actions', tags=['actions'])
 
 ALLOWED_ACTIONS = {'DISABLE_TRADING','CANCEL_OPEN_ENTRIES','FLATTEN_REDUCE','RESOLVE_INCIDENT','PROPOSE_CONFIG','ACTIVATE_CONFIG'}
+CONFIG_ACTIONS = {'PROPOSE_CONFIG', 'ACTIVATE_CONFIG'}
+CONFIG_SAFE_RISK_CHANGES = {'same', 'decrease', 'risk_decrease'}
 AUDIT_REJECTED_ACTION = 'REJECTED_UNSAFE_ACTION'
 
 
@@ -31,6 +33,18 @@ async def action(
     if not req.reason:
         accepted = False
         reasons.append('reason_required')
+    if req.action in CONFIG_ACTIONS:
+        # Config activation/proposal is allowed only when metadata proves that
+        # the change cannot increase risk. Real config application still goes
+        # through config validator and audit; this API guard prevents an
+        # operator override from becoming a hidden risk-up path.
+        risk_change = str(req.target.get('risk_change', '')).lower()
+        if risk_change not in CONFIG_SAFE_RISK_CHANGES:
+            accepted = False
+            reasons.append('config_change_must_be_risk_reducing_or_neutral')
+        if req.target.get('risk_increase') is True:
+            accepted = False
+            reasons.append('config_risk_increase_forbidden')
     # No force-open or increase-risk endpoint exists by design.
     idem_key = namespaced_idempotency_key('manual', x_idempotency_key)
     cached = request.app.state.idempotency.get(idem_key)

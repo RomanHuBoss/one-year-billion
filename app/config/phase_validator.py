@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import Any
 
 PHASE0_SYMBOLS = {'BTCUSDT', 'ETHUSDT', 'SOLUSDT'}
-SHADOW_ONLY_PHASE_0_1 = {'carry_live', 'statarb_live', 'carry', 'pair_statarb'}
-FORBIDDEN_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options'}
+SHADOW_ONLY_PHASE_0_1 = {'carry_live', 'statarb_live', 'carry', 'funding', 'funding_carry', 'pair_statarb', 'statarb', 'stat_arb'}
+FORBIDDEN_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot', 'portfolio_bot'}
 
 
 @dataclass(frozen=True)

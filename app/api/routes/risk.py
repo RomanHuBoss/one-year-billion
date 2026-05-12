@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from app.api.dependencies import request_id
 from app.schemas.api_contract import ApiEnvelope
 from app.schemas.domain import SignalCandidate
-from app.security.auth import require_read
+from app.security.auth import require_read, require_operator
 from app.core.hashes import hash_payload
 from app.execution.idempotency import namespaced_idempotency_key
 from app.ml.inference import MLGate
@@ -35,41 +35,34 @@ async def approve(
     candidate: SignalCandidate,
     request: Request,
     rid: str = Depends(request_id),
-    actor: str = Depends(require_read),
-    x_api_key: str | None = Header(default=None),
+    actor: str = Depends(require_operator),
     x_idempotency_key: str | None = Header(default=None, alias='X-Idempotency-Key'),
 ) -> ApiEnvelope:
     state = request.app.state.demo_state
     runtime = request.app.state.runtime_config
     settings = request.app.state.settings
 
-    # В live/testnet-live контуре risk approval является write-действием:
-    # оно создает RiskDecision, который затем может стать hard gate для order.
-    # Поэтому здесь требуется operator key и idempotency key. Локальный demo
-    # режим оставлен удобным для чтения/проверок и не отправляет ордера.
-    live_idem_key: str | None = None
-    live_candidate_hash: str | None = None
-    if settings.live_requested:
-        if x_api_key != settings.operator_api_key:
-            raise HTTPException(status_code=403, detail='operator_key_required_for_live_risk_approval')
-        if not x_idempotency_key:
-            raise HTTPException(status_code=400, detail='idempotency_key_required_for_live_risk_approval')
-        live_idem_key = namespaced_idempotency_key('risk-approval', x_idempotency_key)
-        live_candidate_hash = hash_payload(candidate.model_dump(mode='json'))
-        cached = request.app.state.idempotency.get(live_idem_key)
-        if cached:
-            if cached['candidate_hash'] != live_candidate_hash:
-                raise HTTPException(status_code=409, detail='idempotency_key_reused_with_different_risk_candidate')
-            saved = cached['envelope']
-            data = dict(saved.get('data') or {})
-            data['idempotent_replay'] = True
-            return ApiEnvelope(
-                request_id=rid,
-                trace_id=saved.get('trace_id'),
-                status=saved.get('status', 'ok'),
-                reasons=saved.get('reasons', []),
-                data=data,
-            )
+    # Risk approval является write-действием: оно создает RiskDecision,
+    # который затем может стать hard gate для order. Поэтому endpoint всегда
+    # требует operator key и idempotency key, даже в локальном paper/demo режиме.
+    if not x_idempotency_key:
+        raise HTTPException(status_code=400, detail='idempotency_key_required_for_risk_approval')
+    live_idem_key = namespaced_idempotency_key('risk-approval', x_idempotency_key)
+    live_candidate_hash = hash_payload(candidate.model_dump(mode='json'))
+    cached = request.app.state.idempotency.get(live_idem_key)
+    if cached:
+        if cached['candidate_hash'] != live_candidate_hash:
+            raise HTTPException(status_code=409, detail='idempotency_key_reused_with_different_risk_candidate')
+        saved = cached['envelope']
+        data = dict(saved.get('data') or {})
+        data['idempotent_replay'] = True
+        return ApiEnvelope(
+            request_id=rid,
+            trace_id=saved.get('trace_id'),
+            status=saved.get('status', 'ok'),
+            reasons=saved.get('reasons', []),
+            data=data,
+        )
 
     def _remember_and_return(envelope: ApiEnvelope) -> ApiEnvelope:
         if live_idem_key and live_candidate_hash:
@@ -124,7 +117,7 @@ async def approve(
             'risk_decision': risk.model_dump(mode='json'),
             'persisted': repo is not None,
             'runtime_source': 'bybit_live' if settings.live_requested else 'demo_state',
-            'live_write_idempotency_enforced': bool(live_idem_key),
+            'write_idempotency_enforced': True,
         },
     )
     return _remember_and_return(envelope)

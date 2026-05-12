@@ -187,7 +187,7 @@ DB-backed evidence обязательно. Env-флаги сами по себе
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":65}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":78}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by "<product-owner>"
 ```
 
@@ -202,9 +202,9 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 5. Stale account/specs/orderbook/funding блокируют risk approval.
 6. Target equity используется только в analytics/stress и не влияет на sizing/risk/execution.
 7. Carry/stat-arb Phase 0/1 не имеют live-маршрута исполнения.
-8. Manual override может только снижать риск: disable, cancel entries, flatten/reduce, resolve incident, config proposal/activation.
+8. Manual override может только снижать риск: disable, cancel entries, flatten/reduce, resolve incident, config proposal/activation. Config proposal/activation принимаются только с metadata `risk_change=same|decrease` и без `risk_increase=true`.
 9. Go/No-Go требует unresolved CRITICAL/HIGH = 0.
-10. Risk approval в live/testnet-live контуре требует operator key и `X-Idempotency-Key`.
+10. Risk approval всегда требует operator key и `X-Idempotency-Key`; это write-действие даже в локальном paper/demo режиме.
 
 ## Структура проекта
 
@@ -224,8 +224,8 @@ app/
   reconciliation/     reconciliation and protection checks
   regime/             conservative regime classifier
   reports/            Go/No-Go report generator
-docs/GO_NO_GO.md       обязательный live-gate checklist
   risk_engine/        hard approval gate, sizing, cost model, liquidation checks
+docs/GO_NO_GO.md       обязательный live-gate checklist
   schemas/            typed domain/API schemas
   security/           RBAC, redaction, startup guard
   services/           локальное demo-state для smoke-запуска

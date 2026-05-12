@@ -382,19 +382,36 @@ BEFORE INSERT OR UPDATE OF risk_decision_id, signal_id ON orders
 FOR EACH ROW EXECUTE FUNCTION validate_order_risk_decision();
 
 CREATE OR REPLACE VIEW latest_symbol_status AS
-SELECT DISTINCT ON (s.symbol)
-    s.symbol,
+WITH status_base AS (
+    SELECT DISTINCT ON (s.symbol)
+        s.symbol,
+        CASE
+            WHEN EXISTS (SELECT 1 FROM incidents i WHERE i.status='OPEN' AND i.severity IN ('HIGH','CRITICAL') AND (i.symbol=s.symbol OR i.symbol IS NULL)) THEN 'ERROR_RECONCILIATION_REQUIRED'::status_effective
+            WHEN EXISTS (SELECT 1 FROM positions p WHERE p.symbol=s.symbol AND p.state='ACTIVE' AND p.protection_state='VALID' AND p.reconciliation_status='PASS') THEN 'ACTIVE'::status_effective
+            WHEN s.status IN ('RISK_REJECTED','REJECTED') THEN 'REJECTED'::status_effective
+            WHEN s.status IN ('BLOCKED') THEN 'BLOCKED'::status_effective
+            ELSE 'NO_TRADE'::status_effective
+        END AS status_effective,
+        s.trace_id,
+        s.reasons,
+        s.created_at AS updated_at
+    FROM signals s
+    ORDER BY s.symbol, s.created_at DESC
+)
+SELECT
+    symbol,
+    status_effective,
     CASE
-        WHEN EXISTS (SELECT 1 FROM incidents i WHERE i.status='OPEN' AND i.severity IN ('HIGH','CRITICAL') AND (i.symbol=s.symbol OR i.symbol IS NULL)) THEN 'ERROR_RECONCILIATION_REQUIRED'::status_effective
-        WHEN EXISTS (SELECT 1 FROM positions p WHERE p.symbol=s.symbol AND p.state='ACTIVE' AND p.protection_state='VALID' AND p.reconciliation_status='PASS') THEN 'ACTIVE'::status_effective
-        WHEN s.status IN ('RISK_REJECTED','REJECTED') THEN 'REJECTED'::status_effective
-        WHEN s.status IN ('BLOCKED') THEN 'BLOCKED'::status_effective
-        ELSE 'NO_TRADE'::status_effective
-    END AS status_effective,
-    s.trace_id,
-    s.reasons,
-    s.created_at
-FROM signals s
-ORDER BY s.symbol, s.created_at DESC;
+        WHEN status_effective = 'ERROR_RECONCILIATION_REQUIRED' THEN 'critical'
+        WHEN status_effective IN ('BLOCKED','DE_RISK') THEN 'high'
+        WHEN status_effective IN ('NO_TRADE','PENDING','REJECTED') THEN 'medium'
+        WHEN status_effective = 'ACTIVE' THEN 'ok'
+        ELSE 'info'
+    END AS severity,
+    reasons,
+    trace_id,
+    ARRAY['DISABLE_TRADING','CANCEL_OPEN_ENTRIES','FLATTEN_REDUCE']::TEXT[] AS allowed_actions,
+    updated_at
+FROM status_base;
 
 COMMIT;

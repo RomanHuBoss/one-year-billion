@@ -1,4 +1,4 @@
-# Отчет о поставке — total_project_check revision 1.7
+# Отчет о поставке — total_project_check revision 1.9
 
 ## Статус
 
@@ -42,6 +42,15 @@
 - Округление `qty` по `qtyStep` переведено на `Decimal`, чтобы бинарная ошибка float не могла округлить позицию вверх и увеличить риск.
 - Добавлены regression-тесты на stale funding, forbidden/shadow-only strategies и Decimal floor-to-step.
 
+
+## Дополнительные исправления редакции 1.9
+
+- `/api/risk/approve` переведен в строгий write-endpoint: operator key и `X-Idempotency-Key` требуются всегда, включая локальный paper/demo режим.
+- Конфигурационные запреты расширены на `copy_trading`, `signal_bot`, `portfolio_bot`; funding/stat-arb aliases в Phase 0/1 блокируются phase validator-ом.
+- Manual config proposal/activation теперь принимаются только как risk-neutral/risk-reducing (`risk_change=same|decrease`) и отклоняют `risk_increase=true`.
+- PostgreSQL view `latest_symbol_status` приведен к frontend-контракту: `status_effective`, `severity`, `reasons`, `trace_id`, `allowed_actions`, `updated_at`.
+- Добавлены regression-тесты для product-scope запретов, manual action safety и DB/frontend status contract.
+
 ## Что было реализовано ранее и сохранено
 
 - `/api/execution/live-submit` с hard gates.
@@ -51,7 +60,7 @@
 - Startup guard блокирует live при demo mode, demo ML, unsafe keys, отсутствующем Go/No-Go и выключенном `CAS_ENABLE_LIVE_SUBMIT`.
 - PostgreSQL repository поддерживает signal, ML verdict, risk decision, order intent, idempotent order reservation, order submitted/error, incidents, manual audit and Go/No-Go evidence.
 - FastAPI state/incident routes используют PostgreSQL, если он доступен.
-- Risk approval в live режиме использует runtime Bybit specs/orderbook/funding/account data, сохраняет lineage в DB и блокируется без PostgreSQL.
+- Risk approval использует operator/idempotency guard; в live режиме дополнительно использует runtime Bybit specs/orderbook/funding/account data, сохраняет lineage в DB и блокируется без PostgreSQL.
 - Bybit adapter поддерживает public/private runtime checks: server time, instruments-info, orderbook, funding, OI, wallet, positions, cancel-all and reduce-only exit helpers.
 - Исправлена SQL migration ошибка с duplicate `trade_id`.
 - `validate_project.py` включает compileall, pytest, strategy import check, architecture invariant check, migration invariant check and secret scan.
@@ -66,7 +75,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-65 passed
+78 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present

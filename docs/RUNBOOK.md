@@ -84,14 +84,14 @@ Live order route: `POST /api/execution/live-submit`.
 
 HTTP ack от Bybit не считается fill. Следующий обязательный этап — private WS или REST reconciliation, затем verification защиты позиции.
 
-## Risk approval в live/testnet-live
+## Risk approval
 
-POST `/api/risk/approve` в live/testnet-live контуре требует:
+POST `/api/risk/approve` является write-endpoint и всегда требует:
 
 - `x-api-key: <OPERATOR_API_KEY>`;
 - `X-Idempotency-Key: <unique-key>`.
 
-Readonly/local read-доступ не должен создавать live-ready `RiskDecision`.
+Readonly/local read-доступ не может создавать `RiskDecision`; повтор с тем же idempotency key возвращает сохраненный результат, а повтор с другим payload блокируется.
 
 ## Аварийные действия
 
@@ -123,7 +123,7 @@ python main.py preflight --mode testnet
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":65}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":78}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by <product-owner>
 ```
 

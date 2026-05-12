@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
-FORBIDDEN_TERMS = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'frontend_keys'}
+FORBIDDEN_TERMS = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot', 'portfolio_bot', 'frontend_keys'}
 
 
 class ConfigValidationError(ValueError):

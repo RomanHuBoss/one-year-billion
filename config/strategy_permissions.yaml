@@ -2,12 +2,12 @@ phases:
   0:
     live: [no_trade, de_risk, breakout, micro_grid]
     shadow: [carry_shadow, statarb_shadow]
-    forbidden: [carry_live, statarb_live, dca, martingale, spot_grid, inverse_futures, options]
+    forbidden: [carry_live, statarb_live, dca, martingale, spot_grid, inverse_futures, options, copy_trading, signal_bot, portfolio_bot]
   1:
     live: [no_trade, de_risk, breakout, micro_grid]
     shadow: [carry_shadow, statarb_shadow]
-    forbidden: [carry_live, statarb_live, dca, martingale, spot_grid, inverse_futures, options]
+    forbidden: [carry_live, statarb_live, dca, martingale, spot_grid, inverse_futures, options, copy_trading, signal_bot, portfolio_bot]
   2:
     live: [no_trade, de_risk, breakout, micro_grid, carry_live, statarb_live]
     shadow: [carry_shadow, statarb_shadow]
-    forbidden: [dca, martingale, spot_grid, inverse_futures, options]
+    forbidden: [dca, martingale, spot_grid, inverse_futures, options, copy_trading, signal_bot, portfolio_bot]

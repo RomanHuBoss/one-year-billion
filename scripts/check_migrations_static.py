@@ -16,6 +16,9 @@ def main() -> int:
         'REJECTED_UNSAFE_ACTION',
         'CREATE TABLE IF NOT EXISTS go_no_go_evidence',
         'go_no_go_pass_requires_approver CHECK',
+        'AS severity',
+        'AS allowed_actions',
+        'AS updated_at',
     ]
     for token in required:
         if token not in sql:

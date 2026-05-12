@@ -78,5 +78,6 @@ def test_live_risk_approval_requires_operator_and_idempotency(monkeypatch):
         assert no_auth.status_code == 403
         no_idem = client.post('/api/risk/approve', json=candidate, headers={'x-api-key': 'operator-test'})
         assert no_idem.status_code == 400
+        assert 'idempotency_key_required_for_risk_approval' in no_idem.text
     finally:
         app.state.settings = old_settings
