@@ -1,0 +1,73 @@
+from __future__ import annotations
+from uuid import uuid4
+from app.schemas.domain import OrderIntent, OrderState, RiskDecision, SignalCandidate
+from app.execution.idempotency import InMemoryIdempotencyStore, deterministic_order_link_id, namespaced_idempotency_key
+
+
+class OrderRouter:
+    def __init__(self, idempotency: InMemoryIdempotencyStore | None = None):
+        self.idempotency = idempotency or InMemoryIdempotencyStore()
+
+    def _assert_cached_request_matches(self, cached: OrderIntent, signal: SignalCandidate, risk: RiskDecision) -> None:
+        """Повтор idempotency key допустим только для того же signal/risk."""
+
+        if cached.signal_id != signal.signal_id or cached.risk_decision_id != risk.risk_decision_id:
+            raise ValueError('idempotency_key_reused_with_different_request')
+
+    def build_intent(self, signal: SignalCandidate, risk: RiskDecision, idempotency_key: str) -> OrderIntent:
+        if not idempotency_key:
+            raise ValueError('idempotency_key_required')
+        idem_key = namespaced_idempotency_key('order', idempotency_key)
+        cached = self.idempotency.get(idem_key)
+        if cached:
+            if not isinstance(cached, OrderIntent):
+                raise ValueError('idempotency_key_reserved_for_other_domain')
+            self._assert_cached_request_matches(cached, signal, risk)
+            return cached
+        if signal.shadow_only:
+            raise ValueError('shadow_signal_has_no_live_route')
+        if not risk.approved:
+            raise ValueError('risk_decision_not_approved')
+        if risk.expired:
+            raise ValueError('risk_decision_expired')
+        if risk.signal_id != signal.signal_id:
+            raise ValueError('risk_signal_mismatch')
+        if risk.feature_hash != signal.feature_hash:
+            raise ValueError('risk_feature_hash_mismatch')
+        if not signal.stop_price or not signal.invalidator:
+            raise ValueError('missing_stop_or_invalidator')
+        if risk.sizing.qty <= 0 or risk.sizing.notional <= 0:
+            raise ValueError('invalid_approved_sizing')
+        if risk.sizing.expected_net_edge_bps <= 0:
+            raise ValueError('no_positive_net_edge')
+        # Межзапросный lock предотвращает второй entry-path по тому же symbol.
+        self.idempotency.lock_symbol(signal.symbol, idem_key)
+        client_order_id = deterministic_order_link_id(signal.signal_id, risk.risk_decision_id, 'entry')
+        intent = OrderIntent(
+            order_id=str(uuid4()), signal_id=signal.signal_id, risk_decision_id=risk.risk_decision_id,
+            client_order_id=client_order_id, symbol=signal.symbol, side=signal.side, order_type='Limit',
+            qty=risk.sizing.qty, price=signal.entry_price, reduce_only=False, state=OrderState.APPROVED,
+            idempotency_key=idempotency_key, trace_id=signal.trace_id,
+        )
+        self.idempotency.put(idem_key, intent)
+        return intent
+
+    def release_symbol(self, symbol: str, idempotency_key: str | None = None) -> None:
+        """Снимает лок после CLOSED/BLOCKED/ERROR_RECONCILIATION_REQUIRED обработки."""
+
+        scoped = namespaced_idempotency_key('order', idempotency_key) if idempotency_key else None
+        self.idempotency.release_symbol(symbol, scoped)
+
+    def bybit_payload(self, intent: OrderIntent) -> dict:
+        payload = {
+            'category': 'linear',
+            'symbol': intent.symbol,
+            'side': 'Buy' if intent.side.value == 'BUY' else 'Sell',
+            'orderType': 'Limit' if intent.order_type in {'Limit','PostOnly'} else 'Market',
+            'qty': str(intent.qty),
+            'price': str(intent.price) if intent.price else None,
+            'timeInForce': 'PostOnly' if intent.order_type == 'PostOnly' else 'GTC',
+            'reduceOnly': intent.reduce_only,
+            'orderLinkId': intent.client_order_id,
+        }
+        return {k: v for k, v in payload.items() if v is not None}

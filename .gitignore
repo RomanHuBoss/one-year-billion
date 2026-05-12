@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.venv/
+
+# Local runtime / secrets
+.env
+models/
+*.log
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

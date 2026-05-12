@@ -1,0 +1,24 @@
+exchange_scope:
+  exchange: bybit
+  api_version: v5
+  category: linear
+  quote: USDT
+  forbid_spot: true
+  forbid_inverse: true
+  forbid_options: true
+frontend:
+  framework: none
+  store_secrets: false
+  source_of_truth: backend
+execution:
+  default_mode: paper
+  deterministic_order_link_id: true
+  idempotency_required: true
+  reduce_only_exits: true
+  active_requires_protection_valid: true
+llm:
+  provider: ollama
+  allowed_verdicts: [BLOCK, ANNOTATE, UNAVAILABLE]
+  can_open_trade: false
+  can_change_size: false
+  can_change_leverage: false

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crypto Acceleration System 2026</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Crypto Acceleration System 2026</h1>
+      <p>Bybit Linear USDT Futures only · backend status source of truth</p>
+    </div>
+    <button id="refreshBtn">Обновить</button>
+  </header>
+
+  <main>
+    <section class="grid cards">
+      <article class="card"><h2>Health</h2><pre id="health">loading...</pre></article>
+      <article class="card"><h2>Risk</h2><pre id="risk">loading...</pre></article>
+      <article class="card"><h2>ML</h2><pre id="ml">loading...</pre></article>
+      <article class="card"><h2>Runtime preflight</h2><pre id="runtime">loading...</pre></article>
+    </section>
+
+    <section class="card">
+      <h2>Symbols</h2>
+      <p class="hint">Таблица и карточка ниже используют один backend status_effective без локального пересчета.</p>
+      <table>
+        <thead><tr><th>Symbol</th><th>Status</th><th>Severity</th><th>Reasons</th><th>Trace</th><th>Allowed actions</th></tr></thead>
+        <tbody id="symbolsBody"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Symbol details</h2>
+      <pre id="symbolDetails">select symbol</pre>
+    </section>
+
+    <section class="card">
+      <h2>Paper pipeline</h2>
+      <button id="paperRunBtn">Run paper once</button>
+      <pre id="paperResult">not started</pre>
+    </section>
+  </main>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

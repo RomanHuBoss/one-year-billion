@@ -1,0 +1,21 @@
+phase: 0
+capital_min_usdt: 500
+capital_max_usdt: 1000
+live_universe:
+  - BTCUSDT
+  - ETHUSDT
+  - SOLUSDT
+live_strategies:
+  - no_trade
+  - de_risk
+  - breakout
+  - micro_grid
+shadow_strategies:
+  - carry_shadow
+  - statarb_shadow
+max_risk_positions: 1
+risk_pct_default: 0.01
+risk_pct_absolute_max: 0.015
+max_effective_leverage: 3.0
+max_effective_leverage_absolute: 5.0
+manual_override_reduce_only: true
