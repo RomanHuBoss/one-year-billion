@@ -20,7 +20,7 @@
 python main.py validate
 ```
 
-Команда запускает compileall, pytest, static strategy import check, migration invariant check и secret scan.
+Команда запускает compileall, pytest, static strategy import check, architecture invariant check, migration invariant check и secret scan.
 
 ## Runtime-gates
 
@@ -44,12 +44,15 @@ python main.py validate
 
 Нельзя добавлять live-route, который обходит эти шаги.
 
-## Дополнительные safety-исправления ревизии 1.6
+## Дополнительные safety-исправления ревизии 1.7
 
 - Redaction маскирует `apiSecret`, `BYBIT_API_KEY`, `X-BAPI-SIGN` и другие распространенные формы секретов регистронезависимо.
 - Config validator регистронезависимо запрещает DCA/martingale/spot/inverse/options в live permissions.
 - Risk sizing считает резерв после estimated initial margin, а не только после fees/slippage.
 - AccountSnapshot содержит daily/weekly loss counters и portfolio/beta exposure для hard caps risk engine.
+- ML training validator запрещает leakage, random shuffle временных рядов и `feature_ts > decision_ts`.
+- OHLC-labeling консервативно трактует same-bar TP/SL ambiguity как loss/skip, а не как прибыль.
+- `scripts/check_architecture.py` добавлен в обязательный validation pipeline.
 
 ## Запрещено
 

@@ -51,7 +51,11 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def cmd_validate(_: argparse.Namespace) -> int:
     load_dotenv()
-    return run_python(['scripts/validate_project.py'])
+    # exec заменяет wrapper-процесс validate-скриптом. Это исключает nested
+    # subprocess edge cases и делает `python main.py validate` эквивалентным
+    # прямому `python scripts/validate_project.py`.
+    os.execv(sys.executable, [sys.executable, str(ROOT / 'scripts' / 'validate_project.py')])
+    return 127
 
 
 def cmd_preflight(args: argparse.Namespace) -> int:
@@ -61,7 +65,8 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     elif args.mode == 'live':
         os.environ.setdefault('BYBIT_TESTNET', 'false')
         os.environ.setdefault('APP_ENV', 'prod')
-    return run_python(['scripts/live_preflight.py'])
+    os.execv(sys.executable, [sys.executable, str(ROOT / 'scripts' / 'live_preflight.py'), '--mode', args.mode])
+    return 127
 
 
 def build_parser() -> argparse.ArgumentParser:

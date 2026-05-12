@@ -45,6 +45,7 @@ def approve_signal(
     fail_if(not market.fresh, 'stale_orderbook')
     fail_if(signal.symbol.upper() != market.symbol.upper() or signal.symbol.upper() != specs.symbol.upper(), 'symbol_runtime_mismatch')
     fail_if(not specs.fresh or specs.category != 'linear' or specs.status != 'Trading', 'bad_instrument_specs')
+    fail_if(specs.tick_size <= 0 or specs.qty_step <= 0 or specs.min_qty < 0 or specs.min_notional < 0 or specs.max_leverage <= 0, 'invalid_instrument_specs')
     # Сигнал не может попасть в sizing без stop, invalidator, evidence и feature_hash.
     fail_if(signal.stop_price is None or not signal.invalidator, 'missing_stop_or_invalidator')
     fail_if(not signal.feature_hash, 'missing_feature_hash')
@@ -69,17 +70,24 @@ def approve_signal(
     fail_if(ml.required and ml.block, f'ml_block:{ml.reason or ml.verdict.value}')
     fail_if(ml.required and ml.verdict.value == 'UNAVAILABLE', 'ml_unavailable_fail_closed')
 
-    sizing = compute_sizing_after_rounding(
-        signal=signal,
-        account=account,
-        market=market,
-        specs=specs,
-        risk_pct=cfg.risk_pct_default,
-        max_effective_leverage=cfg.max_effective_leverage,
-        reserve_cash_pct=cfg.reserve_cash_pct,
-        min_liq_distance_pct=cfg.min_liq_distance_pct,
-        cost_model=cost_model,
-    )
+    try:
+        sizing = compute_sizing_after_rounding(
+            signal=signal,
+            account=account,
+            market=market,
+            specs=specs,
+            risk_pct=cfg.risk_pct_default,
+            max_effective_leverage=cfg.max_effective_leverage,
+            reserve_cash_pct=cfg.reserve_cash_pct,
+            min_liq_distance_pct=cfg.min_liq_distance_pct,
+            cost_model=cost_model,
+        )
+    except Exception as exc:
+        # Ошибка sizing не должна превращаться в 500 или в advisory-pass.
+        # Любая невалидная биржевая спецификация/математика fail-closed.
+        reasons.append(f'sizing_failed:{type(exc).__name__}')
+        from app.schemas.domain import SizingResult
+        sizing = SizingResult(risk_budget=max(account.equity_usdt * cfg.risk_pct_default, 0.0))
 
     fail_if(sizing.qty < specs.min_qty or sizing.notional < specs.min_notional, 'min_qty_or_notional')
     fail_if(sizing.max_loss_if_stop > sizing.risk_budget, 'risk_budget_exceeded')

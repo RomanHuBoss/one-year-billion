@@ -13,6 +13,7 @@ def main() -> int:
         'active_position_protected CHECK',
         'one_pending_entry_per_symbol',
         'manual_reduce_only CHECK',
+        'REJECTED_UNSAFE_ACTION',
         'CREATE TABLE IF NOT EXISTS go_no_go_evidence',
         'go_no_go_pass_requires_approver CHECK',
     ]

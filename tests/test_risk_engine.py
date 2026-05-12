@@ -79,3 +79,12 @@ def test_portfolio_abs_exposure_cap_blocks_candidate():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, max_portfolio_abs_notional_usdt=500))
     assert not rd.approved
     assert 'portfolio_abs_exposure_cap' in rd.reasons
+
+
+def test_invalid_instrument_specs_fail_closed_without_exception():
+    signal, ml, account, market, specs = base_objects()
+    specs.qty_step = 0
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_instrument_specs' in rd.reasons
+    assert any(reason.startswith('sizing_failed:') for reason in rd.reasons)

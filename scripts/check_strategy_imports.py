@@ -3,21 +3,30 @@ import ast
 from pathlib import Path
 
 FORBIDDEN = ('app.execution', 'execution', 'bybit_adapter', 'order_router', 'exchange_client')
-failed = []
-for path in Path('app/strategies').glob('*.py'):
-    if path.name == '__init__.py':
-        continue
-    tree = ast.parse(path.read_text(encoding='utf-8'))
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.Import, ast.ImportFrom)):
-            names = []
-            if isinstance(node, ast.Import):
-                names = [a.name for a in node.names]
-            else:
-                names = [node.module or '']
-            for name in names:
-                if any(f in name for f in FORBIDDEN):
-                    failed.append((str(path), name))
-if failed:
-    raise SystemExit(f'Forbidden strategy imports: {failed}')
-print('OK: strategies have no direct execution/Bybit imports')
+
+
+def main() -> int:
+    failed = []
+    for path in Path('app/strategies').glob('*.py'):
+        if path.name == '__init__.py':
+            continue
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                names = []
+                if isinstance(node, ast.Import):
+                    names = [a.name for a in node.names]
+                else:
+                    names = [node.module or '']
+                for name in names:
+                    if any(f in name for f in FORBIDDEN):
+                        failed.append((str(path), name))
+    if failed:
+        print(f'Forbidden strategy imports: {failed}')
+        return 2
+    print('OK: strategies have no direct execution/Bybit imports')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

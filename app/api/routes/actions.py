@@ -9,6 +9,7 @@ from app.security.auth import require_operator
 router = APIRouter(prefix='/api/actions', tags=['actions'])
 
 ALLOWED_ACTIONS = {'DISABLE_TRADING','CANCEL_OPEN_ENTRIES','FLATTEN_REDUCE','RESOLVE_INCIDENT','PROPOSE_CONFIG','ACTIVATE_CONFIG'}
+AUDIT_REJECTED_ACTION = 'REJECTED_UNSAFE_ACTION'
 
 
 @router.post('')
@@ -38,7 +39,13 @@ async def action(
     request.app.state.demo_state.manual_actions.append({'actor': actor, 'action': req.action, 'reason': req.reason, 'target': req.target, 'accepted': accepted, 'trace_id': trace_id, 'idempotency_key': x_idempotency_key})
     repo = getattr(request.app.state, 'repository', None)
     if repo is not None:
-        repo.log_manual_action(actor=actor, action=req.action, reason=req.reason, target=req.target, status='ACCEPTED' if accepted else 'REJECTED', trace_id=trace_id)
+        # Небезопасную команду сохраняем как audit-marker, а не как исполнимое действие.
+        # Это предотвращает 500 на DB CHECK и сохраняет исходную попытку в target.
+        audit_action = req.action if req.action in ALLOWED_ACTIONS else AUDIT_REJECTED_ACTION
+        audit_target = dict(req.target)
+        if audit_action == AUDIT_REJECTED_ACTION:
+            audit_target['attempted_action'] = req.action
+        repo.log_manual_action(actor=actor, action=audit_action, reason=req.reason or 'reason_missing', target=audit_target, status='ACCEPTED' if accepted else 'REJECTED', trace_id=trace_id)
     result = ManualActionResult(accepted=accepted, action=req.action, reduce_only=True, reasons=reasons, trace_id=trace_id)
     envelope_payload = {'trace_id': trace_id, 'status': 'ok' if accepted else 'rejected', 'reasons': reasons, 'data': result.model_dump()}
     request.app.state.idempotency.put(idem_key, envelope_payload)
