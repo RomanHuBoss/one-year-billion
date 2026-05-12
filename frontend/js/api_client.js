@@ -1,7 +1,11 @@
 export async function api(path, options = {}) {
+  const { headers: optionHeaders = {}, ...requestOptions } = options;
   const response = await fetch(path, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    ...options
+    ...requestOptions,
+    headers: {
+      'Content-Type': 'application/json',
+      ...optionHeaders,
+    },
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

@@ -140,6 +140,8 @@ python main.py validate
 
 Это не произвольный shell. Браузер вызывает backend API, backend проверяет `OPERATOR_API_KEY`, требует причину и запускает только allowlist-команды через Python `subprocess` с `shell=False`. Live-submit этим блоком не включается.
 
+Если при запуске команды появляется `422 Unprocessable Entity`, обновите страницу с очисткой кэша браузера. В актуальной версии frontend гарантированно отправляет `Content-Type: application/json`, а backend дополнительно понимает JSON-строку от старого клиента.
+
 ## Безопасные значения по умолчанию
 
 В `.env.example` live отключен:

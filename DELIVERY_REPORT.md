@@ -271,3 +271,29 @@ secret scan: PASS
 ```
 
 Live-submit через этот блок не включается. `preflight_live` только проверяет gates и обязан оставаться `blocked`, пока нет PostgreSQL, Bybit runtime, paper/shadow evidence и Go/No-Go PASS.
+
+## Редакция: operator-command-content-type-fix
+
+Исправлена ошибка запуска операторских команд из браузера: при добавлении `x-api-key` frontend перезаписывал объект headers и терял `Content-Type: application/json`. FastAPI получал тело как строку и возвращал `422 Unprocessable Entity` с сообщением `Input should be a valid dictionary`.
+
+### Что изменено
+
+- `frontend/js/api_client.js` теперь сначала применяет `requestOptions`, а затем гарантированно добавляет `Content-Type: application/json` вместе с пользовательскими заголовками.
+- `app/api/routes/operator_jobs.py` дополнительно умеет разобрать JSON-строку в теле запроса, чтобы старые вкладки/клиенты не получали непонятный 422.
+- Добавлены regression-тесты на:
+  - text/plain JSON body для `/api/operator/commands/{command_id}/run`;
+  - сохранение `Content-Type` при кастомных headers во frontend API client.
+
+### Проверки
+
+```text
+python main.py validate
+95 passed
+compileall: PASS
+architecture checks: PASS
+migration checks: PASS
+secret scan: PASS
+
+node --check frontend/js/api_client.js
+node --check frontend/js/app.js
+```

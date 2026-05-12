@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Request
+from pydantic import BaseModel, Field, ValidationError
 
 from app.api.dependencies import request_id
 from app.core.hashes import new_trace_id
@@ -17,6 +17,28 @@ router = APIRouter(prefix='/api/operator', tags=['operator-jobs'])
 class OperatorCommandRequest(BaseModel):
     reason: str
     options: dict[str, Any] = Field(default_factory=dict)
+
+
+def _parse_command_request(body: Any) -> OperatorCommandRequest:
+    """Разбирает тело запроса от браузера и внешних клиентов.
+
+    В старой версии frontend терял Content-Type при добавлении x-api-key,
+    из-за чего FastAPI видел JSON как обычную строку и возвращал 422.
+    API остается безопасным: команда всё равно запускается только по allowlist,
+    с OPERATOR_API_KEY, причиной и idempotency key. Но оператор теперь получает
+    нормальную обработку даже при text/plain теле запроса.
+    """
+
+    try:
+        if isinstance(body, OperatorCommandRequest):
+            return body
+        if isinstance(body, str):
+            return OperatorCommandRequest.model_validate_json(body)
+        if isinstance(body, dict):
+            return OperatorCommandRequest.model_validate(body)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail={'error': 'invalid_operator_command_request', 'fields': exc.errors()}) from exc
+    raise HTTPException(status_code=400, detail='operator_command_request_must_be_json_object')
 
 
 @router.get('/commands')
@@ -41,14 +63,15 @@ async def list_operator_commands(
 @router.post('/commands/{command_id}/run')
 async def run_operator_command(
     command_id: str,
-    req: OperatorCommandRequest,
     request: Request,
+    body: Any = Body(...),
     rid: str = Depends(request_id),
     actor: str = Depends(require_operator),
     x_idempotency_key: str | None = Header(default=None, alias='X-Idempotency-Key'),
 ) -> ApiEnvelope:
     if not x_idempotency_key:
         raise HTTPException(status_code=400, detail='idempotency_key_required')
+    req = _parse_command_request(body)
     if not req.reason.strip():
         raise HTTPException(status_code=400, detail='reason_required')
 

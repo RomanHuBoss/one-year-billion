@@ -110,3 +110,25 @@ def test_python_bootstrap_db_replaces_shell_bootstrap_for_ui():
     assert 'Операционный центр' in html
     assert 'python scripts/bootstrap_db.py' in help_js
     assert 'shell=False' in open('app/services/operator_jobs.py', encoding='utf-8').read()
+
+
+def test_operator_command_accepts_browser_text_plain_json_body_after_header_bug():
+    client = TestClient(app)
+    accepted = client.post(
+        '/api/operator/commands/preflight_testnet/run',
+        headers={'x-api-key': DEFAULT_OPERATOR_KEY, 'X-Idempotency-Key': 'cmd-test-text-body'},
+        data='{"reason":"Первичная проверка проекта","options":{}}',
+    )
+    assert accepted.status_code == 200, accepted.text
+    payload = accepted.json()
+    assert payload['status'] == 'accepted'
+    assert payload['data']['job']['command_id'] == 'preflight_testnet'
+
+
+def test_api_client_preserves_content_type_when_custom_headers_are_added():
+    api_client = open('frontend/js/api_client.js', encoding='utf-8').read()
+    assert 'const { headers: optionHeaders = {}, ...requestOptions } = options;' in api_client
+    assert '...requestOptions,' in api_client
+    assert "'Content-Type': 'application/json'" in api_client
+    assert '...optionHeaders' in api_client
+    assert "headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },\n    ...options" not in api_client
