@@ -31,7 +31,7 @@ def validate_config(cfg: dict[str, Any]) -> list[str]:
         reasons.append('leverage_default_above_absolute_max')
     if float(risk.get('min_net_edge_bps', 0)) <= 0:
         reasons.append('min_net_edge_must_be_positive')
-    live = set(account.get('live_strategies', []))
+    live = {str(x).lower() for x in account.get('live_strategies', [])}
     if live & FORBIDDEN_TERMS:
         reasons.append('forbidden_strategy_in_live_permissions')
     phase = int(account.get('phase', 0))

@@ -52,3 +52,30 @@ def test_nonpositive_gross_edge_rejected_before_execution():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
     assert not rd.approved
     assert 'missing_or_nonpositive_gross_edge' in rd.reasons
+
+
+def test_reserve_cash_uses_initial_margin_not_only_costs():
+    signal, ml, account, market, specs = base_objects()
+    # Очень широкий stop снижает qty, но цена делает notional близким к equity.
+    # Старый расчет резерва вычитал только costs и пропускал такую заявку.
+    signal.entry_price = 100000
+    signal.stop_price = 99500
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, reserve_cash_pct=0.80, max_effective_leverage=3.0))
+    assert not rd.approved
+    assert 'reserve_cash_violation' in rd.reasons
+
+
+def test_daily_and_weekly_remaining_risk_are_hard_caps():
+    signal, ml, account, market, specs = base_objects()
+    account.realized_negative_today_usdt = account.equity_usdt * 0.03
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'daily_remaining_risk_exhausted' in rd.reasons
+
+
+def test_portfolio_abs_exposure_cap_blocks_candidate():
+    signal, ml, account, market, specs = base_objects()
+    account.portfolio_abs_notional_usdt = 499
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, max_portfolio_abs_notional_usdt=500))
+    assert not rd.approved
+    assert 'portfolio_abs_exposure_cap' in rd.reasons

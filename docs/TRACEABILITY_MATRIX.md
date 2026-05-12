@@ -16,3 +16,8 @@
 | Live risk approval требует RBAC/idempotency | `app/api/routes/risk.py`, `app/execution/idempotency.py` | `tests/test_live_risk_approval_gates.py` |
 | LLM boundary: только BLOCK/ANNOTATE/UNAVAILABLE | `app/llm/news_risk.py`, `app/llm/ollama_client.py` | `tests/test_llm_boundary.py` |
 | CLI-запуск из корня | `main.py`, `scripts/run_backend.sh`, `README.md` | `python main.py --help`, `python main.py validate` |
+| Runtime Bybit specs полные перед live | `app/live/preflight.py` проверяет `tickSize`, `qtyStep`, `minQty`, `minNotional`, `maxLeverage` | `tests/test_live_gates.py::test_live_preflight_blocks_when_runtime_specs_are_incomplete` |
+| Config forbidden terms case-insensitive | `app/config/validator.py` нормализует live strategies в lower-case | `tests/test_config_validator.py::test_forbidden_strategy_names_are_case_insensitive` |
+| Reserve cash учитывает initial margin | `app/risk_engine/position_sizing.py` вычитает conservative initial margin | `tests/test_risk_engine.py::test_reserve_cash_uses_initial_margin_not_only_costs` |
+| Daily/weekly/portfolio caps hard gate | `app/risk_engine/approval.py`, `AccountSnapshot` | `tests/test_risk_engine.py::test_daily_and_weekly_remaining_risk_are_hard_caps`, `tests/test_risk_engine.py::test_portfolio_abs_exposure_cap_blocks_candidate` |
+| Redaction покрывает Bybit/API secret variants | `app/security/redaction.py` | `tests/test_redaction.py` |

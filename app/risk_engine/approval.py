@@ -14,6 +14,10 @@ class RiskConfig:
     max_effective_leverage: float = 3.0
     reserve_cash_pct: float = 0.20
     approval_ttl_seconds: int = 60
+    max_daily_loss_pct: float = 0.03
+    max_weekly_loss_pct: float = 0.06
+    max_portfolio_abs_notional_usdt: float | None = None
+    max_beta_adjusted_exposure_usdt: float | None = None
     min_liq_distance_pct: float = 0.05
     max_spread_bps: float = 8.0
     min_depth_usdt: float = 1_000_000
@@ -58,6 +62,10 @@ def approve_signal(
     fail_if(market.depth_usdt < cfg.min_depth_usdt, 'depth_too_low')
     fail_if(account.position_mismatch, 'position_mismatch')
     fail_if(account.daily_loss_hit or account.weekly_loss_hit, 'loss_limit_hit')
+    daily_remaining_risk = account.equity_usdt * cfg.max_daily_loss_pct - account.realized_negative_today_usdt
+    weekly_remaining_risk = account.equity_usdt * cfg.max_weekly_loss_pct - account.realized_negative_week_usdt
+    fail_if(daily_remaining_risk <= 0, 'daily_remaining_risk_exhausted')
+    fail_if(weekly_remaining_risk <= 0, 'weekly_remaining_risk_exhausted')
     fail_if(ml.required and ml.block, f'ml_block:{ml.reason or ml.verdict.value}')
     fail_if(ml.required and ml.verdict.value == 'UNAVAILABLE', 'ml_unavailable_fail_closed')
 
@@ -75,7 +83,13 @@ def approve_signal(
 
     fail_if(sizing.qty < specs.min_qty or sizing.notional < specs.min_notional, 'min_qty_or_notional')
     fail_if(sizing.max_loss_if_stop > sizing.risk_budget, 'risk_budget_exceeded')
+    fail_if(sizing.max_loss_if_stop > daily_remaining_risk, 'daily_remaining_risk_exceeded')
+    fail_if(sizing.max_loss_if_stop > weekly_remaining_risk, 'weekly_remaining_risk_exceeded')
     fail_if(sizing.effective_leverage > cfg.max_effective_leverage, 'leverage_cap')
+    if cfg.max_portfolio_abs_notional_usdt is not None:
+        fail_if(account.portfolio_abs_notional_usdt + sizing.notional > cfg.max_portfolio_abs_notional_usdt, 'portfolio_abs_exposure_cap')
+    if cfg.max_beta_adjusted_exposure_usdt is not None:
+        fail_if(abs(account.beta_adjusted_exposure_usdt) + sizing.notional > cfg.max_beta_adjusted_exposure_usdt, 'beta_adjusted_exposure_cap')
     fail_if(sizing.reserve_cash_after_pct < cfg.reserve_cash_pct, 'reserve_cash_violation')
     fail_if(sizing.liquidation_distance_pct < max(cfg.min_liq_distance_pct, 2.5 * sizing.stop_distance_pct), 'liq_distance_too_close')
     fail_if(sizing.expected_net_edge_bps <= cfg.min_net_edge_bps, 'no_net_edge_after_costs')
@@ -90,6 +104,12 @@ def approve_signal(
             'risk_pct_default': cfg.risk_pct_default,
             'max_effective_leverage': cfg.max_effective_leverage,
             'reserve_cash_pct': cfg.reserve_cash_pct,
+            'max_daily_loss_pct': cfg.max_daily_loss_pct,
+            'max_weekly_loss_pct': cfg.max_weekly_loss_pct,
+            'daily_remaining_risk': daily_remaining_risk,
+            'weekly_remaining_risk': weekly_remaining_risk,
+            'max_portfolio_abs_notional_usdt': cfg.max_portfolio_abs_notional_usdt,
+            'max_beta_adjusted_exposure_usdt': cfg.max_beta_adjusted_exposure_usdt,
             'min_liq_distance_pct': cfg.min_liq_distance_pct,
             'min_net_edge_bps': cfg.min_net_edge_bps,
         },

@@ -8,7 +8,14 @@ class FakeAdapterOK:
         return {'retCode': 0, 'time': 123}
 
     def runtime_instruments_info(self, symbol):
-        return {'retCode': 0, 'result': {'list': [{'symbol': symbol, 'category': 'linear', 'status': 'Trading'}]}}
+        return {'retCode': 0, 'result': {'list': [{
+            'symbol': symbol,
+            'category': 'linear',
+            'status': 'Trading',
+            'priceFilter': {'tickSize': '0.1'},
+            'lotSizeFilter': {'qtyStep': '0.001', 'minOrderQty': '0.001', 'minNotionalValue': '5'},
+            'leverageFilter': {'maxLeverage': '100'},
+        }]}}
 
     def get_wallet_balance(self):
         return {'retCode': 0, 'result': {'list': [{'accountType': 'UNIFIED'}]}}
@@ -123,3 +130,29 @@ def test_live_preflight_blocks_when_trade_permission_not_verified():
     assert result.status == 'blocked'
     assert 'bybit_api_key_trade_permission_not_verified' in result.reasons
     assert result.checks['bybit_private_api_and_permissions_verified'] is False
+
+
+class FakeAdapterMissingQtyStep(FakeAdapterOK):
+    def runtime_instruments_info(self, symbol):
+        payload = super().runtime_instruments_info(symbol)
+        payload['result']['list'][0]['lotSizeFilter'].pop('qtyStep')
+        return payload
+
+
+def test_live_preflight_blocks_when_runtime_specs_are_incomplete():
+    runtime = build_runtime_config()
+    settings = Settings(
+        trading_enabled=True,
+        bybit_live_confirm=True,
+        enable_live_submit=True,
+        bybit_api_key='k',
+        bybit_api_secret='s',
+        live_go_nogo_passed=True,
+        live_approved_by='product-owner',
+        require_go_nogo_for_live=True,
+        require_live_preflight=True,
+    )
+    result = run_live_preflight(settings, runtime, db_available=True, repository=FakeRepo(), adapter=FakeAdapterMissingQtyStep())
+    assert result.status == 'blocked'
+    assert result.checks['runtime_instrument_specs_verified'] is False
+    assert any('runtime_specs_missing_or_nonpositive:qty_step' in reason for reason in result.reasons)

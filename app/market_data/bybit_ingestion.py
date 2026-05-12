@@ -112,6 +112,14 @@ class BybitMarketDataIngestion:
         positions = self.adapter.get_positions()
         pos_rows = (positions.get('result') or {}).get('list') or []
         nonflat_positions = [p for p in pos_rows if _float_nested(p.get('size'), 0.0) > 0]
+        portfolio_abs_notional = sum(
+            _float_nested(p.get('size'), 0.0) * (
+                _float_nested(p.get('markPrice'), 0.0)
+                or _float_nested(p.get('avgPrice'), 0.0)
+                or _float_nested(p.get('entryPrice'), 0.0)
+            )
+            for p in nonflat_positions
+        )
         return AccountSnapshot(
             equity_usdt=equity,
             available_balance_usdt=max(available, 0.0),
@@ -121,6 +129,8 @@ class BybitMarketDataIngestion:
             # переводят систему в fail-closed до reconciliation. Это защищает
             # Phase 0 max-one-position scope от скрытого exposure.
             position_mismatch=bool(nonflat_positions),
+            portfolio_abs_notional_usdt=portfolio_abs_notional,
+            beta_adjusted_exposure_usdt=portfolio_abs_notional,
             fetched_at=now,
             expires_at=now + timedelta(seconds=30),
         )

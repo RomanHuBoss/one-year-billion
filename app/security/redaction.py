@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
-SECRET_KEYS = {'api_key','apiSecret','api_secret','secret','token','password','authorization'}
+SECRET_KEYS = {'api_key','apisecret','api_secret','secret','token','password','authorization','x-bapi-api-key','x-bapi-sign','x-api-key','bybit_api_key','bybit_api_secret'}
 
 
 def redact(data: Any) -> Any:

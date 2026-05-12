@@ -1,4 +1,4 @@
-# Отчет о поставке — live-gated revision 1.5
+# Отчет о поставке — live-gated revision 1.6
 
 ## Статус
 
@@ -7,6 +7,13 @@
 Финальное production-live разрешение нельзя подтвердить внутри песочницы без реального Bybit-аккаунта, PostgreSQL и 2–4 недель paper/shadow evidence. Поэтому корректная live-ready логика проекта — блокировать live, пока внешние gates не подтверждены.
 
 ## Основные изменения текущей редакции
+
+- Усилен `run_live_preflight`: теперь live-gate проверяет не только `status=Trading`, но и положительные `tickSize`, `qtyStep`, `minQty`, `minNotional`, `maxLeverage` по каждому Bybit Linear instrument.
+- Исправлен redaction: `apiSecret`, `BYBIT_API_KEY`, `X-BAPI-SIGN` и родственные ключи маскируются регистронезависимо.
+- Исправлен config validator: запреты DCA/martingale/spot/inverse/options теперь регистронезависимы.
+- Усилен sizing: reserve cash считается после conservative initial margin estimate, а не только после estimated costs.
+- В risk engine добавлены daily/weekly remaining risk, portfolio absolute exposure и beta-adjusted exposure caps.
+- Добавлен `docs/GO_NO_GO.md`.
 
 - Добавлен корневой CLI `main.py`:
   - `python main.py` — запуск backend/dashboard;
@@ -42,7 +49,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-41 passed
+47 passed
 OK: strategies have no direct execution/Bybit imports
 OK: migration static invariants present
 OK: no obvious secrets

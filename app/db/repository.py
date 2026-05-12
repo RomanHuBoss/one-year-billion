@@ -57,11 +57,15 @@ class Repository:
         self.db.execute(
             """
             INSERT INTO account_snapshots(equity_usdt, available_balance_usdt, account_mode,
-                position_mismatch, permissions_json, raw_payload_hash, fetched_at, expires_at)
-            VALUES (%s,%s,%s,%s,%s::jsonb,%s,%s,%s)
+                position_mismatch, realized_negative_today_usdt, realized_negative_week_usdt,
+                portfolio_abs_notional_usdt, beta_adjusted_exposure_usdt, permissions_json,
+                raw_payload_hash, fetched_at, expires_at)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s::jsonb,%s,%s,%s)
             """,
             [account.equity_usdt, account.available_balance_usdt, account.account_mode,
-             account.position_mismatch, _json({'runtime_checked': True}),
+             account.position_mismatch, account.realized_negative_today_usdt,
+             account.realized_negative_week_usdt, account.portfolio_abs_notional_usdt,
+             account.beta_adjusted_exposure_usdt, _json({'runtime_checked': True}),
              raw_payload_hash or hash_payload(account.model_dump(mode='json')), account.fetched_at, account.expires_at],
         )
 

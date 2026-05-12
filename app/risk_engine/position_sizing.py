@@ -34,7 +34,11 @@ def compute_sizing_after_rounding(
     estimated_exit_costs = notional * (cost_model.round_trip_cost_bps(market.spread_bps, taker=False, funding_bps=market.funding_bps) / 10000.0)
     max_loss_if_stop = qty * stop_distance_abs + estimated_exit_costs
     effective_leverage = notional / max(account.equity_usdt, 1e-9)
-    reserve_cash_after_pct = max((account.available_balance_usdt - estimated_exit_costs) / max(account.equity_usdt, 1e-9), 0.0)
+    # Резерв считается после conservative initial margin estimate. Старый вариант
+    # вычитал только costs и мог пропустить позицию, которая формально укладывалась
+    # в risk_usdt, но фактически съедала весь свободный баланс малого счета.
+    estimated_initial_margin = notional / max(max_effective_leverage, 1e-9)
+    reserve_cash_after_pct = max((account.available_balance_usdt - estimated_exit_costs - estimated_initial_margin) / max(account.equity_usdt, 1e-9), 0.0)
     stop_distance_pct = stop_distance_abs / entry
     # Conservative approximation when exchange liq price is not available.
     liquidation_distance_pct = max(1 / max(effective_leverage, 1e-9) - 0.01, 0.0) if effective_leverage > 0 else 1.0

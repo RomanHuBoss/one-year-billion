@@ -32,6 +32,41 @@ def _api_key_permissions_allow_linear_trade(payload: dict[str, Any]) -> bool:
     return has_contract_scope and has_trade_scope
 
 
+def _positive_number(value: Any) -> bool:
+    try:
+        return float(value) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def _extract_runtime_specs(item: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Извлекает обязательные runtime-параметры инструмента Bybit V5.
+
+    Live-preflight не должен ограничиваться status=Trading: tickSize, qtyStep,
+    minQty/minNotional и maxLeverage влияют на sizing и risk. Если Bybit меняет
+    формат ответа или поле отсутствует, preflight fail-closed блокирует live.
+    """
+
+    lot = item.get('lotSizeFilter') or {}
+    price = item.get('priceFilter') or {}
+    leverage = item.get('leverageFilter') or {}
+    extracted = {
+        'symbol': item.get('symbol'),
+        'category': item.get('category', 'linear'),
+        'status': item.get('status'),
+        'tick_size': price.get('tickSize'),
+        'qty_step': lot.get('qtyStep'),
+        'min_qty': lot.get('minOrderQty'),
+        'min_notional': lot.get('minNotionalValue'),
+        'max_leverage': leverage.get('maxLeverage'),
+    }
+    missing = [
+        field for field in ('tick_size', 'qty_step', 'min_qty', 'min_notional', 'max_leverage')
+        if not _positive_number(extracted.get(field))
+    ]
+    return extracted, missing
+
+
 def build_adapter(settings: Settings) -> BybitAdapter:
     return BybitAdapter(BybitConfig(
         api_key=settings.bybit_api_key,
@@ -117,20 +152,21 @@ def run_live_preflight(settings: Settings, runtime, db_available: bool, reposito
 
         # Public runtime specs for every live symbol.
         runtime_specs: dict[str, Any] = {}
+        runtime_spec_reasons: list[str] = []
         for symbol in runtime.live_universe:
             try:
                 info = adapter.runtime_instruments_info(symbol)
                 item = (info.get('result') or {}).get('list', [{}])[0]
-                runtime_specs[symbol] = {
-                    'status': item.get('status'),
-                    'category': item.get('category', 'linear'),
-                    'symbol': item.get('symbol'),
-                }
+                extracted, missing = _extract_runtime_specs(item)
+                runtime_specs[symbol] = extracted
                 if item.get('symbol') != symbol or item.get('category', 'linear') != 'linear' or item.get('status') != 'Trading':
-                    reasons.append(f'{symbol}:runtime_specs_not_tradable_linear')
+                    runtime_spec_reasons.append(f'{symbol}:runtime_specs_not_tradable_linear')
+                if missing:
+                    runtime_spec_reasons.append(f'{symbol}:runtime_specs_missing_or_nonpositive:{",".join(missing)}')
             except Exception as exc:
-                reasons.append(f'{symbol}:runtime_specs_check_failed:{type(exc).__name__}')
-        checks['runtime_instrument_specs_verified'] = not any(':runtime_specs' in r for r in reasons)
+                runtime_spec_reasons.append(f'{symbol}:runtime_specs_check_failed:{type(exc).__name__}')
+        reasons.extend(runtime_spec_reasons)
+        checks['runtime_instrument_specs_verified'] = not runtime_spec_reasons
         data['runtime_specs'] = runtime_specs
 
         # Authenticated check confirms that keys/permissions are not fake strings.

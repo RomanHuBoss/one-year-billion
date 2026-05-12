@@ -101,11 +101,21 @@ CREATE TABLE IF NOT EXISTS account_snapshots (
     available_balance_usdt NUMERIC(30,8) NOT NULL,
     account_mode TEXT NOT NULL,
     position_mismatch BOOLEAN NOT NULL DEFAULT FALSE,
+    realized_negative_today_usdt NUMERIC(30,8) NOT NULL DEFAULT 0,
+    realized_negative_week_usdt NUMERIC(30,8) NOT NULL DEFAULT 0,
+    portfolio_abs_notional_usdt NUMERIC(30,8) NOT NULL DEFAULT 0,
+    beta_adjusted_exposure_usdt NUMERIC(30,8) NOT NULL DEFAULT 0,
     permissions_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     raw_payload_hash TEXT NOT NULL,
     fetched_at TIMESTAMPTZ NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
-    CONSTRAINT equity_positive CHECK (equity_usdt >= 0 AND available_balance_usdt >= 0)
+    CONSTRAINT equity_positive CHECK (equity_usdt >= 0 AND available_balance_usdt >= 0),
+    CONSTRAINT account_risk_snapshots_nonnegative CHECK (
+        realized_negative_today_usdt >= 0
+        AND realized_negative_week_usdt >= 0
+        AND portfolio_abs_notional_usdt >= 0
+        AND beta_adjusted_exposure_usdt >= 0
+    )
 );
 CREATE INDEX IF NOT EXISTS idx_account_expires ON account_snapshots(expires_at DESC);
 

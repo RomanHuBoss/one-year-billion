@@ -8,7 +8,7 @@
 - PostgreSQL-миграции с hard constraints и lineage для signals, ML, risk, orders, fills, positions, incidents, configs и Go/No-Go evidence.
 - Risk engine как обязательный gate: нет approved non-expired `risk_decision_id` — нет order.
 - Execution boundary для Bybit V5: только `category=linear`, deterministic `orderLinkId`, idempotency, per-symbol lock, fail-closed live-submit.
-- Runtime-preflight для testnet/live: Bybit public/private checks, права API-ключа, PostgreSQL, Go/No-Go evidence, unresolved incidents.
+- Runtime-preflight для testnet/live: Bybit public/private checks, права API-ключа, PostgreSQL, Go/No-Go evidence, unresolved incidents и обязательные положительные runtime specs (`tickSize`, `qtyStep`, `minQty`, `minNotional`, `maxLeverage`).
 - Консервативный regime classifier и phase validator: Phase 0 ограничен BTCUSDT/ETHUSDT/SOLUSDT; carry/stat-arb в Phase 0/1 только shadow.
 - Стратегии возвращают только `SignalCandidate`; прямой импорт execution/Bybit из `app/strategies` запрещен static test-ом.
 - ML gate работает только как `ALLOW/BLOCK/UNAVAILABLE` и fail-closed при stale/missing model.
@@ -18,7 +18,7 @@
 
 ## Текущий статус готовности
 
-Редакция `1.5.0-cli-ru-live-gated` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
+Редакция `1.6.0-deep-audit-live-gated` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
@@ -186,7 +186,7 @@ DB-backed evidence обязательно. Env-флаги сами по себе
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":41}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":47}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by "<product-owner>"
 ```
 
@@ -223,6 +223,7 @@ app/
   reconciliation/     reconciliation and protection checks
   regime/             conservative regime classifier
   reports/            Go/No-Go report generator
+docs/GO_NO_GO.md       обязательный live-gate checklist
   risk_engine/        hard approval gate, sizing, cost model, liquidation checks
   schemas/            typed domain/API schemas
   security/           RBAC, redaction, startup guard

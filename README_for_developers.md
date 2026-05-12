@@ -35,7 +35,7 @@ python main.py validate
 `/api/execution/live-submit` не является shortcut к бирже. Последовательность обязательна:
 
 1. `validate_startup_security()` блокирует unsafe env.
-2. `run_live_preflight()` проверяет DB, Go/No-Go, unresolved incidents, Bybit public/private access и runtime instruments.
+2. `run_live_preflight()` проверяет DB, Go/No-Go, unresolved incidents, Bybit public/private access и runtime instruments, включая положительные `tickSize`, `qtyStep`, `minQty`, `minNotional`, `maxLeverage`.
 3. `Repository.verify_live_risk_decision()` проверяет, что `RiskDecision` реально сохранен в PostgreSQL, approved и non-expired.
 4. `OrderRouter` строит deterministic `orderLinkId` и idempotent intent.
 5. `Repository.reserve_order_intent()` вставляет order в DB, где trigger повторно проверяет approved risk decision.
@@ -43,6 +43,13 @@ python main.py validate
 7. HTTP ack не переводит позицию в ACTIVE; следующий обязательный контур — reconciliation + protection watchdog.
 
 Нельзя добавлять live-route, который обходит эти шаги.
+
+## Дополнительные safety-исправления ревизии 1.6
+
+- Redaction маскирует `apiSecret`, `BYBIT_API_KEY`, `X-BAPI-SIGN` и другие распространенные формы секретов регистронезависимо.
+- Config validator регистронезависимо запрещает DCA/martingale/spot/inverse/options в live permissions.
+- Risk sizing считает резерв после estimated initial margin, а не только после fees/slippage.
+- AccountSnapshot содержит daily/weekly loss counters и portfolio/beta exposure для hard caps risk engine.
 
 ## Запрещено
 

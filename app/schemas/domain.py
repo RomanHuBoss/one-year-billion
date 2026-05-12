@@ -106,6 +106,14 @@ class AccountSnapshot(BaseModel):
     position_mismatch: bool = False
     daily_loss_hit: bool = False
     weekly_loss_hit: bool = False
+    # Консервативные лимиты портфеля задаются snapshot-ом, чтобы risk engine
+    # не полагался на устные допущения или frontend. При отсутствии внешнего
+    # журнала значения fail-safe: открытые позиции считаются нулевыми, но
+    # daily/weekly hit-флаги выше всё равно могут полностью закрыть входы.
+    realized_negative_today_usdt: float = 0.0
+    realized_negative_week_usdt: float = 0.0
+    portfolio_abs_notional_usdt: float = 0.0
+    beta_adjusted_exposure_usdt: float = 0.0
     fetched_at: datetime
     expires_at: datetime
 
