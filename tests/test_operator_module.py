@@ -34,3 +34,20 @@ def test_operator_frontend_is_not_raw_json_dashboard():
     assert '<pre id="risk"' not in html
     assert '<pre id="ml"' not in html
     assert '<pre id="runtime"' not in html
+
+
+def test_operator_frontend_has_context_help_on_right_click():
+    html = open('frontend/index.html', encoding='utf-8').read()
+    js = open('frontend/js/app.js', encoding='utf-8').read()
+    help_js = open('frontend/js/context_help.js', encoding='utf-8').read()
+    css = open('frontend/css/styles.css', encoding='utf-8').read()
+    assert 'globalHelpBtn' in html
+    assert 'Правая кнопка по любому блоку' in html
+    assert 'data-help="hero"' in html
+    assert 'data-help="actions"' in html
+    assert "installContextHelp" in js
+    assert "contextmenu" in help_js
+    assert 'Вызвать справку' in help_js
+    assert 'help-dialog' in css
+    assert 'stale_market' in help_js
+    assert 'Нет approved non-expired risk_decision_id' in help_js

@@ -226,3 +226,15 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 ### Итог редакции 5.0
 
 Статус проекта остается безопасным: `test-ready`; `paper-ready` после подключения PostgreSQL/runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до PostgreSQL, Bybit runtime checks, paper/shadow evidence и Go/No-Go PASS.
+
+## Редакция 5.0 — интерактивная контекстная справка
+
+Добавлена встроенная справка оператора: правый клик по ключевому компоненту интерфейса открывает пункт «Вызвать справку», после выбора появляется диалог с конкретным объяснением выбранного блока, текущего статуса, действий оператора, критериев нормы и запретов. Справка покрывает верхний статус, панель допуска, блокеры, Phase 0 limits, план перехода к live, символы, детали символа, safe-actions, paper summary и техническую диагностику.
+
+Проверки редакции 5.0:
+
+- `python main.py validate` — PASS, 90 tests passed.
+- `node --check frontend/js/context_help.js` — PASS.
+- `node --check frontend/js/app.js` — PASS.
+- `python main.py preflight --mode testnet` — ожидаемо blocked без внешней среды.
+- `python main.py preflight --mode live` — ожидаемо blocked без внешней среды.

@@ -1,4 +1,5 @@
 import { api } from './api_client.js';
+import { installContextHelp } from './context_help.js';
 
 const $ = (id) => document.getElementById(id);
 let lastDashboard = null;
@@ -28,7 +29,7 @@ function setHero(hero) {
 
 function renderCards(cards) {
   $('cards').innerHTML = cards.map(card => `
-    <article class="metric-card">
+    <article class="metric-card" data-help="card" data-help-id="${escapeHtml(card.id)}">
       <header>
         <h3>${escapeHtml(card.title)}</h3>
         ${badge(card.state === 'ok' ? 'OK' : card.state === 'danger' ? 'БЛОК' : card.state === 'warning' ? 'ВНИМАНИЕ' : 'INFO', card.state)}
@@ -41,11 +42,11 @@ function renderCards(cards) {
 
 function renderBlockers(blockers) {
   if (!blockers || blockers.length === 0) {
-    $('blockers').innerHTML = '<div class="blocker empty"><strong>Явных блокеров нет.</strong><span>Продолжайте по плану перехода к live.</span></div>';
+    $('blockers').innerHTML = '<div class="blocker empty" data-help="blockers"><strong>Явных блокеров нет.</strong><span>Продолжайте по плану перехода к live.</span></div>';
     return;
   }
   $('blockers').innerHTML = blockers.map(item => `
-    <div class="blocker">
+    <div class="blocker" data-help="blocker" data-help-code="${escapeHtml(item.code)}">
       <code>${escapeHtml(item.code)}</code>
       <div><strong>${escapeHtml(item.text)}</strong><span>Устраните причину и повторите preflight.</span></div>
     </div>
@@ -64,14 +65,14 @@ function renderLimits(limits) {
     ['TTL risk approval', `${limits.approval_ttl_seconds} сек.`],
     ['Оборот', `до ${limits.turnover_round_turns_per_day} round-turn/day`],
   ];
-  $('limits').innerHTML = rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
+  $('limits').innerHTML = rows.map(([k, v]) => `<div data-help="limit" data-help-key="${escapeHtml(k)}" data-help-value="${escapeHtml(v)}"><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
 }
 
 function renderSteps(steps) {
   const stateLabel = { ok: 'PASS', todo: 'НУЖНО', blocked: 'БЛОК', manual: 'ПРОВЕРИТЬ' };
   const stateLevel = { ok: 'ok', todo: 'warning', blocked: 'danger', manual: 'info' };
   $('steps').innerHTML = steps.map(step => `
-    <article class="step-card ${escapeHtml(step.state)}">
+    <article class="step-card ${escapeHtml(step.state)}" data-help="step" data-help-id="${escapeHtml(step.id)}">
       ${badge(stateLabel[step.state] || step.state, stateLevel[step.state] || 'info')}
       <h3>${escapeHtml(step.title)}</h3>
       <p>${escapeHtml(step.explain)}</p>
@@ -85,7 +86,7 @@ function renderSymbols(symbols) {
   const rows = symbols.map((row, idx) => {
     const selected = selectedSymbol?.symbol === row.symbol || (!selectedSymbol && idx === 0);
     return `
-      <button class="symbol-row ${selected ? 'selected' : ''}" data-symbol="${escapeHtml(row.symbol)}">
+      <button class="symbol-row ${selected ? 'selected' : ''}" data-help="symbol" data-symbol="${escapeHtml(row.symbol)}">
         <span class="symbol-name">${escapeHtml(row.symbol)}</span>
         <span>
           ${badge(row.status_label || row.status_effective, row.severity_level)}
@@ -109,11 +110,15 @@ function renderSymbols(symbols) {
 
 function renderSymbolDetails(row) {
   if (!row) {
+    $('symbolDetails').dataset.help = 'symbolDetails';
+    $('symbolDetails').removeAttribute('data-symbol');
     $('symbolDetails').innerHTML = '<div class="empty-state">Выберите символ слева.</div>';
     return;
   }
   const reasonItems = (row.reason_labels || row.reasons || []).map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>Причины не указаны.</li>';
   const actions = (row.allowed_action_labels || row.allowed_actions || []).map(a => `<span class="chip">${escapeHtml(a)}</span>`).join('') || '<span class="chip">действий нет</span>';
+  $('symbolDetails').dataset.help = 'symbolDetails';
+  $('symbolDetails').dataset.symbol = row.symbol;
   $('symbolDetails').innerHTML = `
     <div class="detail-title">
       <h3>${escapeHtml(row.symbol)}</h3>
@@ -134,13 +139,13 @@ function renderActions(actions) {
     return;
   }
   $('safeActions').innerHTML = actions.map(item => `
-    <article class="action-card">
+    <article class="action-card" data-help="action" data-action="${escapeHtml(item.action)}">
       <h3>${escapeHtml(item.title)}</h3>
       <p>${escapeHtml(item.description)}</p>
       <button class="btn danger" data-action="${escapeHtml(item.action)}">Выполнить</button>
     </article>
   `).join('');
-  [...document.querySelectorAll('[data-action]')].forEach(btn => {
+  [...document.querySelectorAll('button[data-action]')].forEach(btn => {
     btn.addEventListener('click', () => submitSafeAction(btn.dataset.action));
   });
 }
@@ -159,7 +164,7 @@ function renderPaperSummary(data) {
     const status = row.status || (row.risk?.approved ? 'risk_approved' : 'risk_rejected');
     const strategy = row.strategy ? ` · ${row.strategy}` : '';
     const reasons = row.reasons || row.risk?.reasons || [];
-    return `<div class="paper-item"><strong>${escapeHtml(row.symbol)}${escapeHtml(strategy)} — ${escapeHtml(status)}</strong><span>${escapeHtml(reasons.join('; ') || 'решение записано')}</span></div>`;
+    return `<div class="paper-item" data-help="paper"><strong>${escapeHtml(row.symbol)}${escapeHtml(strategy)} — ${escapeHtml(status)}</strong><span>${escapeHtml(reasons.join('; ') || 'решение записано')}</span></div>`;
   }).join('');
 }
 
@@ -235,6 +240,11 @@ $('refreshBtn').addEventListener('click', () => loadAll().catch(showFatal));
 $('paperRunBtn').addEventListener('click', runPaper);
 $('toggleDiagBtn').addEventListener('click', toggleDiagnostics);
 $('copyDiagBtn').addEventListener('click', copyDiagnostics);
+
+installContextHelp({
+  getDashboard: () => lastDashboard,
+  getSelectedSymbol: () => selectedSymbol,
+});
 
 function showFatal(err) {
   document.body.insertAdjacentHTML('beforeend', `<div class="callout error" style="margin:20px">${escapeHtml(err.message)}</div>`);

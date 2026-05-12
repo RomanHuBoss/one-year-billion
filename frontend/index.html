@@ -16,13 +16,14 @@
       </div>
     </div>
     <div class="header-actions">
-      <span id="topStatus" class="status-pill neutral">загрузка</span>
+      <span id="topStatus" class="status-pill neutral" data-help="hero">загрузка</span>
+      <button id="globalHelpBtn" class="btn help">Справка</button>
       <button id="refreshBtn" class="btn primary">Обновить</button>
     </div>
   </header>
 
   <main class="shell">
-    <section id="hero" class="hero-card loading">
+    <section id="hero" class="hero-card loading" data-help="hero">
       <div>
         <p class="eyebrow">Текущее состояние</p>
         <h2 id="heroTitle">Загрузка состояния...</h2>
@@ -34,10 +35,10 @@
       </div>
     </section>
 
-    <section class="toolbar-card">
+    <section class="toolbar-card" data-help="toolbar">
       <div>
         <h2>Быстрый тест</h2>
-        <p>Безопасные проверки. Они не открывают live-сделки.</p>
+        <p>Безопасные проверки. Они не открывают live-сделки. Правая кнопка по любому блоку → «Вызвать справку».</p>
       </div>
       <div class="toolbar-actions">
         <button id="paperRunBtn" class="btn secondary">Paper один раз</button>
@@ -45,7 +46,7 @@
       </div>
     </section>
 
-    <section>
+    <section data-help="readiness">
       <div class="section-heading">
         <div>
           <h2>Панель допуска</h2>
@@ -56,7 +57,7 @@
     </section>
 
     <section class="two-column">
-      <article class="panel">
+      <article class="panel" data-help="blockers">
         <div class="panel-heading">
           <h2>Что мешает запуску</h2>
           <p>Исправляйте сверху вниз. Если список пустой, смотрите план перехода.</p>
@@ -64,7 +65,7 @@
         <div id="blockers" class="blocker-list"></div>
       </article>
 
-      <article class="panel">
+      <article class="panel" data-help="limits">
         <div class="panel-heading">
           <h2>Настройки Phase 0</h2>
           <p>Ограничения малого счета, которые оператор не должен обходить.</p>
@@ -73,7 +74,7 @@
       </article>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-help="steps">
       <div class="panel-heading horizontal">
         <div>
           <h2>План перехода от теста к live</h2>
@@ -84,7 +85,7 @@
     </section>
 
     <section class="symbols-layout">
-      <article class="panel symbols-panel">
+      <article class="panel symbols-panel" data-help="symbols">
         <div class="panel-heading horizontal">
           <div>
             <h2>Символы</h2>
@@ -94,7 +95,7 @@
         <div id="symbols" class="symbol-list"></div>
       </article>
 
-      <aside class="panel symbol-details">
+      <aside class="panel symbol-details" data-help="symbolDetails">
         <div class="panel-heading">
           <h2>Детали символа</h2>
           <p>Причины и разрешенные действия понятным языком.</p>
@@ -103,7 +104,7 @@
       </aside>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-help="actions">
       <div class="panel-heading horizontal">
         <div>
           <h2>Безопасные действия оператора</h2>
@@ -124,7 +125,7 @@
       <div id="actionResult" class="callout hidden"></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" data-help="paper">
       <div class="panel-heading">
         <h2>Результат paper-теста</h2>
         <p>Здесь показывается краткое резюме последнего запуска. Полный JSON спрятан в диагностике.</p>
@@ -132,7 +133,7 @@
       <div id="paperSummary" class="paper-summary empty-state">Paper еще не запускался.</div>
     </section>
 
-    <section id="diagnostics" class="panel diagnostics hidden">
+    <section id="diagnostics" class="panel diagnostics hidden" data-help="diagnostics">
       <div class="panel-heading horizontal">
         <div>
           <h2>Техническая диагностика</h2>
