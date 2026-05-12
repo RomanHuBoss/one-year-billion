@@ -51,6 +51,13 @@
 - PostgreSQL view `latest_symbol_status` приведен к frontend-контракту: `status_effective`, `severity`, `reasons`, `trace_id`, `allowed_actions`, `updated_at`.
 - Добавлены regression-тесты для product-scope запретов, manual action safety и DB/frontend status contract.
 
+## Дополнительные исправления редакции 2.0
+
+- Добавлена миграция `migrations/0003_hard_invariants.sql`, которая усиливает защиту от прямого SQL bypass: approved risk decision требует положительных sizing values, order qty/notional не может превышать approved sizing, signal/risk `feature_hash` должен совпадать, shadow/rejected signal не имеет live-route.
+- Усилены DB constraints для `signals`, `positions` и `manual_request_log`: запрещены продуктовые стратегии, trade-candidate требует lineage/evidence, ACTIVE position не может быть flat/zero-qty, config activation/proposal не может повышать риск.
+- `scripts/bootstrap_db.sh` теперь применяет все core-миграции автоматически и не применяет demo-seed без явного `CAS_SEED_DEMO_DATA=true`.
+- Добавлены static regression-тесты `tests/test_migration_hard_invariants_static.py`; общий локальный набор вырос до 80 тестов.
+
 ## Что было реализовано ранее и сохранено
 
 - `/api/execution/live-submit` с hard gates.
@@ -75,7 +82,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-78 passed
+80 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present

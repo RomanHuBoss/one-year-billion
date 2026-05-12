@@ -5,7 +5,7 @@
 ## Что реализовано
 
 - FastAPI backend на Python 3.11+.
-- PostgreSQL-миграции с hard constraints и lineage для signals, ML, risk, orders, fills, positions, incidents, configs и Go/No-Go evidence.
+- PostgreSQL-миграции с hard constraints, включая дополнительную миграцию `0003_hard_invariants.sql` и lineage для signals, ML, risk, orders, fills, positions, incidents, configs и Go/No-Go evidence.
 - Risk engine как обязательный gate: нет approved non-expired `risk_decision_id` — нет order.
 - Execution boundary для Bybit V5: только `category=linear`, deterministic `orderLinkId`, idempotency, per-symbol lock, fail-closed live-submit.
 - Runtime-preflight для testnet/live: Bybit public/private checks, права API-ключа, PostgreSQL, Go/No-Go evidence, unresolved incidents и обязательные положительные runtime specs (`tickSize`, `qtyStep`, `minQty`, `minNotional`, `maxLeverage`).
@@ -67,6 +67,8 @@ createdb cas2026
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/cas2026"
 ./scripts/bootstrap_db.sh
 ```
+
+Скрипт применяет все core-миграции `migrations/000*.sql`, кроме demo-seed. Demo-данные применяются только при явном `CAS_SEED_DEMO_DATA=true`.
 
 Опциональная локальная demo-загрузка:
 
@@ -187,7 +189,7 @@ DB-backed evidence обязательно. Env-флаги сами по себе
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":78}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":80}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by "<product-owner>"
 ```
 

@@ -2,8 +2,8 @@
 
 | Finding / invariant | Реализация | Тест / проверка |
 |---|---|---|
-| CF-02 / INV-01: нет approved `risk_decision_id` — нет order | `migrations/0001_core_schema.sql`, `app/risk_engine/approval.py`, `app/execution/order_router.py`, `app/db/repository.py` | `tests/test_risk_engine.py`, `tests/test_execution.py`, `tests/test_live_submit_route.py` |
-| CF-03 / INV-02: нет verified protection — нет ACTIVE | `positions.active_position_protected`, `app/execution/state_machine.py`, `app/reconciliation/protection_watchdog.py` | `tests/test_state_machine.py` |
+| CF-02 / INV-01: нет approved `risk_decision_id` — нет order | `migrations/0001_core_schema.sql`, `migrations/0003_hard_invariants.sql`, `app/risk_engine/approval.py`, `app/execution/order_router.py`, `app/db/repository.py` | `tests/test_risk_engine.py`, `tests/test_execution.py`, `tests/test_live_submit_route.py` |
+| CF-03 / INV-02: нет verified protection — нет ACTIVE | `positions.active_position_protected`, `migrations/0003_hard_invariants.sql`, `app/execution/state_machine.py`, `app/reconciliation/protection_watchdog.py` | `tests/test_state_machine.py` |
 | CF-04 / INV-05: stale data blocks | `app/market_data/freshness.py`, `app/risk_engine/approval.py`, `app/api/routes/runtime.py` | `tests/test_risk_engine.py`, `tests/test_market_data_ingestion.py` |
 | CF-06: grid не martingale | `app/regime/classifier.py`, `app/strategies/micro_grid.py`, `config/strategy_permissions.yaml` | `tests/test_strategy_architecture.py`, `tests/test_phase_runtime.py`, `tests/test_strategy_gates.py` |
 | CF-07: retry не увеличивает exposure | `app/execution/idempotency.py`, `app/execution/order_router.py`, `app/db/repository.py` | `tests/test_execution.py`, `tests/test_idempotency_hardening.py`, `tests/test_live_submit_hardening.py` |
@@ -27,3 +27,5 @@
 
 | Запрещенные продуктовые стратегии включают copy/signal/portfolio | `app/config/validator.py`, `app/config/phase_validator.py`, `config/strategy_permissions.yaml` | `tests/test_config_forbidden_scope.py` |
 | Manual config activation не может повысить риск | `app/api/routes/actions.py` | `tests/test_manual_actions_safety.py` |
+
+| DB hard invariants закрывают direct SQL bypass | `migrations/0003_hard_invariants.sql`, `scripts/bootstrap_db.sh`, `scripts/check_migrations_static.py` | `tests/test_migration_hard_invariants_static.py`, `python main.py validate` |

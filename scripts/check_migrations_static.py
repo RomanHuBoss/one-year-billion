@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def main() -> int:
-    sql = Path('migrations/0001_core_schema.sql').read_text(encoding='utf-8')
+    sql = '\n'.join(path.read_text(encoding='utf-8') for path in sorted(Path('migrations').glob('*.sql')))
     failures: list[str] = []
     if sql.count('trade_id UUID PRIMARY KEY') != 1:
         failures.append('trades_journal_duplicate_primary_key')
@@ -16,6 +16,13 @@ def main() -> int:
         'REJECTED_UNSAFE_ACTION',
         'CREATE TABLE IF NOT EXISTS go_no_go_evidence',
         'go_no_go_pass_requires_approver CHECK',
+        'risk_approved_sizing_values_sane',
+        'signals_product_scope_guard',
+        'signals_trade_candidate_requires_lineage',
+        'active_position_nonflat_qty',
+        'manual_config_change_reduce_only',
+        'order qty exceeds approved risk sizing',
+        'risk_decision feature_hash mismatch',
         'AS severity',
         'AS allowed_actions',
         'AS updated_at',
