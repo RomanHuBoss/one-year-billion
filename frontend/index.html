@@ -46,6 +46,34 @@
       </div>
     </section>
 
+
+
+    <section class="panel" data-help="commands">
+      <div class="panel-heading horizontal">
+        <div>
+          <h2>Операционный центр</h2>
+          <p>Запускает разрешенные backend-команды без терминала: validate, preflight и PostgreSQL migrations. Произвольной shell-команды здесь нет.</p>
+        </div>
+        <button id="reloadCommandsBtn" class="btn ghost">Обновить команды</button>
+      </div>
+      <div class="command-form">
+        <label>
+          Ключ оператора
+          <input id="commandOperatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
+        </label>
+        <label>
+          Причина запуска
+          <textarea id="commandReason" rows="3" placeholder="Например: первичная настройка PostgreSQL, проверка перед testnet, контроль перед live preflight..."></textarea>
+        </label>
+        <label class="checkbox-label">
+          <input id="seedDemoData" type="checkbox" />
+          Добавить demo seed при bootstrap DB
+        </label>
+      </div>
+      <div id="operatorCommands" class="command-center"></div>
+      <div id="operatorJobResult" class="job-output empty-state">Команды еще не запускались.</div>
+    </section>
+
     <section data-help="readiness">
       <div class="section-heading">
         <div>

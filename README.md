@@ -65,15 +65,15 @@ pip install -r requirements.txt
 ```bash
 createdb cas2026
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/cas2026"
-./scripts/bootstrap_db.sh
+python scripts/bootstrap_db.py
 ```
 
-Скрипт применяет все core-миграции `migrations/000*.sql`, кроме demo-seed. Demo-данные применяются только при явном `CAS_SEED_DEMO_DATA=true`.
+Скрипт применяет все core-миграции `migrations/000*.sql`, кроме demo-seed. Demo-данные применяются только при явном ключе `--seed-demo`.
 
 Опциональная локальная demo-загрузка:
 
 ```bash
-CAS_SEED_DEMO_DATA=true ./scripts/bootstrap_db.sh
+python scripts/bootstrap_db.py --seed-demo
 ```
 
 ### 3. Переменные окружения
@@ -107,7 +107,7 @@ python main.py
 
 Dashboard / операторский модуль: `http://127.0.0.1:8000/`
 
-Операторский модуль показывает крупный статус, причины блокировки, план перехода к live, безопасные действия и символы без сырого JSON. Подробное руководство: `docs/OPERATOR_MANUAL.md` и `docs/OPERATOR_MANUAL.docx`.
+Операторский модуль показывает крупный статус, причины блокировки, операционный центр для allowlisted Python-команд, план перехода к live, безопасные действия и символы без сырого JSON. Подробное руководство: `docs/OPERATOR_MANUAL.md` и `docs/OPERATOR_MANUAL.docx`.
 
 OpenAPI: `http://127.0.0.1:8000/docs`
 
@@ -127,6 +127,18 @@ python main.py validate
 - architecture invariant check: слои, циклические зависимости, frontend/source-of-truth, target-equity isolation;
 - static check миграций;
 - secret scan.
+
+
+### Операционный центр без терминала
+
+В интерфейсе есть блок **Операционный центр**. Он позволяет оператору запускать основные backend-команды из браузера:
+
+- `python main.py validate`;
+- `python main.py preflight --mode testnet`;
+- `python scripts/bootstrap_db.py`;
+- `python main.py preflight --mode live`.
+
+Это не произвольный shell. Браузер вызывает backend API, backend проверяет `OPERATOR_API_KEY`, требует причину и запускает только allowlist-команды через Python `subprocess` с `shell=False`. Live-submit этим блоком не включается.
 
 ## Безопасные значения по умолчанию
 

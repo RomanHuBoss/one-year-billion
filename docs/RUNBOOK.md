@@ -6,13 +6,26 @@
 source .venv/bin/activate
 cp .env.example .env
 export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cas2026
-./scripts/bootstrap_db.sh
+python scripts/bootstrap_db.py
 python main.py
 ```
 
-Dashboard / операторский модуль: `http://127.0.0.1:8000/`.
+Dashboard / операторский модуль: `http://127.0.0.1:8000/`. В блоке **Операционный центр** можно запускать validate, preflight и `python scripts/bootstrap_db.py` прямо из браузера через backend allowlist-runner.
 
 Откройте операторский модуль и сначала смотрите блоки **Текущее состояние**, **Что мешает запуску** и **План перехода от теста к live**. Сырой JSON спрятан в диагностике и нужен только для разработчика.
+
+
+## Операционный центр в браузере
+
+Основные проверки можно выполнять без терминала:
+
+1. Откройте `/`.
+2. Найдите блок **Операционный центр**.
+3. Введите `OPERATOR_API_KEY`.
+4. Введите причину запуска.
+5. Нажмите нужную команду.
+
+Доступны только allowlist-команды: validate, testnet preflight, PostgreSQL bootstrap через `python scripts/bootstrap_db.py`, live preflight. Произвольные команды, shell, psql и отправка live-ордера из этого блока невозможны.
 
 ## Бумажный контур
 

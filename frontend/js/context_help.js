@@ -24,6 +24,14 @@ const HELP_TEXT = {
     safeWhen: 'Кнопка безопасна, если backend работает и live-submit выключен.',
     dont: ['Не считайте одиночный paper-запуск доказательством готовности к live. Нужны 14+ дней evidence.'],
   },
+
+  commands: {
+    title: 'Операционный центр',
+    meaning: 'Здесь браузер не получает терминал. Он отправляет запрос в backend, а backend запускает только заранее разрешенные Python-команды без shell.',
+    doNow: ['Введите OPERATOR_API_KEY.', 'Введите конкретную причину запуска.', 'Нажмите нужную команду: validate, testnet preflight, bootstrap DB или live preflight.', 'Дождитесь результата job и прочитайте stdout/stderr.'],
+    safeWhen: 'Безопасно, потому что список команд allowlist-only, live-submit не включается, а bootstrap DB заменен на Python-скрипт без psql/shell.',
+    dont: ['Не пытайтесь использовать этот блок как произвольную консоль.', 'Не запускайте live preflight как разрешение торговать: он только проверяет gates.'],
+  },
   readiness: {
     title: 'Панель допуска',
     meaning: 'Это короткая сводка gate: торговля, БД, risk engine, live gate, фаза, ML.',
@@ -48,7 +56,7 @@ const HELP_TEXT = {
   steps: {
     title: 'План перехода к live',
     meaning: 'Это контрольный маршрут: local validate → testnet preflight → PostgreSQL → paper/shadow → Go/No-Go → live preflight.',
-    doNow: ['Выполняйте пункты строго по порядку.', 'Если пункт blocked или todo — live еще запрещен.', 'Команду из карточки запускайте в терминале из корня проекта.'],
+    doNow: ['Выполняйте пункты строго по порядку.', 'Если пункт blocked или todo — live еще запрещен.', 'Основные команды запускайте из блока «Операционный центр». Терминал нужен только для аварийной диагностики.'],
     safeWhen: 'Переход к live допустим только когда все обязательные пункты имеют PASS и unresolved CRITICAL/HIGH = 0.',
     dont: ['Не прыгайте сразу к live preflight.', 'Не заменяйте 14+ дней paper/shadow одиночным запуском.'],
   },
@@ -100,7 +108,7 @@ const CARD_HELP = {
   database: {
     title: 'Карточка «База данных»',
     meaning: 'PostgreSQL хранит hard constraints, idempotency, risk decisions, fills, incidents и Go/No-Go evidence.',
-    doNow: ['Для локального UI отсутствие БД допустимо.', 'Для testnet/live поднимите PostgreSQL и миграции: ./scripts/bootstrap_db.sh.', 'Повторите preflight и проверьте database_available=true.'],
+    doNow: ['Для локального UI отсутствие БД допустимо.', 'Для testnet/live поднимите PostgreSQL и примените миграции: python scripts/bootstrap_db.py или кнопка в «Операционном центре».', 'Повторите preflight и проверьте database_available=true.'],
     safeWhen: 'Для live карточка должна быть «подключена».',
     dont: ['Не торгуйте live без БД: тогда нельзя доказать risk approval, idempotency и incident history.'],
   },
@@ -237,6 +245,30 @@ function helpForAction(action, dashboard) {
   };
 }
 
+
+function helpForCommand(commandId, dashboard) {
+  const cmd = dashboard?.data?.operator_commands?.find(item => item.command_id === commandId);
+  if (!cmd) return HELP_TEXT.commands;
+  const commandMap = {
+    validate: 'Проверяет код и тесты. Запускайте после изменений и перед testnet/live проверками.',
+    preflight_testnet: 'Проверяет testnet-готовность без реальных денег. Если status=blocked — исправляйте reasons.',
+    bootstrap_db: 'Применяет PostgreSQL migrations через Python. Это замена ./scripts/bootstrap_db.sh; shell/psql больше не нужен.',
+    preflight_live: 'Проверяет live gates. До DB, evidence и Go/No-Go PASS нормальный результат — blocked.',
+  };
+  return {
+    title: `Команда: ${cmd.title}`,
+    meaning: cmd.description,
+    doNow: [
+      commandMap[cmd.command_id] || 'Запускайте только если понимаете назначение команды.',
+      'Введите OPERATOR_API_KEY и причину запуска.',
+      'После завершения смотрите статус job, exit code, stdout и stderr.',
+    ],
+    safeWhen: `${cmd.safety} Timeout: ${cmd.timeout_sec} сек. Команда запускается backend allowlist-runner, не shell.` ,
+    dont: ['Не считайте PASS одной команды разрешением live.', 'Не записывайте demo seed в production-БД.'],
+    command: cmd.command_id === 'bootstrap_db' ? 'python scripts/bootstrap_db.py' : cmd.command_id,
+  };
+}
+
 function helpForLimit(key, value) {
   return {
     title: `Лимит: ${key || 'Phase 0'}`,
@@ -259,6 +291,7 @@ function helpFromElement(el, dashboard) {
   }
   if (type === 'blocker') return helpForBlocker(el.dataset.helpCode, dashboard);
   if (type === 'action') return helpForAction(el.dataset.action, dashboard);
+  if (type === 'command') return helpForCommand(el.dataset.commandId, dashboard);
   if (type === 'limit') return helpForLimit(el.dataset.helpKey, el.dataset.helpValue);
   return HELP_TEXT[type] || HELP_TEXT.screen;
 }

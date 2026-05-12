@@ -238,3 +238,36 @@ blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
 - `node --check frontend/js/app.js` — PASS.
 - `python main.py preflight --mode testnet` — ожидаемо blocked без внешней среды.
 - `python main.py preflight --mode live` — ожидаемо blocked без внешней среды.
+
+## Редакция: operator-command-center
+
+Добавлен операторский запуск технических команд прямо из интерфейса без произвольного shell-доступа.
+
+### Что изменено
+
+- Добавлен backend allowlist-runner `app/services/operator_jobs.py`.
+- Добавлены endpoints:
+  - `GET /api/operator/commands`;
+  - `POST /api/operator/commands/{command_id}/run`;
+  - `GET /api/operator/jobs/{job_id}`.
+- Добавлена Python-замена `./scripts/bootstrap_db.sh`: `python scripts/bootstrap_db.py`.
+- `scripts/bootstrap_db.sh` оставлен только как совместимый wrapper на Python-реализацию.
+- В операторский интерфейс добавлен блок **Операционный центр**.
+- Frontend запускает только allowlist-команды backend: validate, testnet preflight, PostgreSQL migrations, live preflight.
+- Команды требуют `OPERATOR_API_KEY`, причину запуска и `X-Idempotency-Key`.
+- Запуск команд логируется в audit trail как `RUN_OPERATOR_COMMAND`, когда PostgreSQL доступен.
+- Добавлена миграция `0004_operator_command_audit.sql`.
+- Обновлены README, RUNBOOK и руководство оператора.
+
+### Проверки
+
+```text
+python main.py validate
+93 passed
+compileall: PASS
+architecture checks: PASS
+migration checks: PASS
+secret scan: PASS
+```
+
+Live-submit через этот блок не включается. `preflight_live` только проверяет gates и обязан оставаться `blocked`, пока нет PostgreSQL, Bybit runtime, paper/shadow evidence и Go/No-Go PASS.

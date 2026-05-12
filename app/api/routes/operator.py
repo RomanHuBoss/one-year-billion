@@ -234,7 +234,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'id': 'postgresql',
             'title': '3. PostgreSQL и миграции',
             'state': 'ok' if db_available else 'todo',
-            'command': './scripts/bootstrap_db.sh',
+            'command': 'python scripts/bootstrap_db.py',
             'explain': 'БД хранит hard constraints, idempotency, risk decisions, fills, incidents и evidence.',
             'pass_when': 'database_available=true в Runtime-проверке.',
         },
@@ -314,7 +314,7 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
     data = {
         'source_of_truth': 'backend_status_effective',
         'app': settings.app_name,
-        'version': 'operator-module-v2',
+        'version': 'operator-module-v3-command-center',
         'operator_mode': 'live_requested' if settings.live_requested else 'local_or_testnet_safe',
         'hero': _top_banner(request, runtime_result),
         'cards': _readiness_cards(request, runtime_result),
@@ -336,6 +336,7 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
             'approval_ttl_seconds': runtime.risk.approval_ttl_seconds,
             'turnover_round_turns_per_day': int((runtime.raw.get('risk.yaml') or {}).get('turnover_round_turns_per_day', 4)),
         },
+        'operator_commands': getattr(request.app.state, 'operator_jobs').list_commands(),
         'diagnostics': {
             'runtime_status': runtime_result.status,
             'runtime_checks': getattr(runtime_result, 'checks', {}),

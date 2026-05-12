@@ -4,6 +4,7 @@ import { installContextHelp } from './context_help.js';
 const $ = (id) => document.getElementById(id);
 let lastDashboard = null;
 let selectedSymbol = null;
+let operatorCommands = [];
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
@@ -150,6 +151,96 @@ function renderActions(actions) {
   });
 }
 
+
+function renderOperatorCommands(commands) {
+  operatorCommands = commands || [];
+  const box = $('operatorCommands');
+  if (!operatorCommands.length) {
+    box.innerHTML = '<div class="empty-state">Backend не вернул доступных операторских команд.</div>';
+    return;
+  }
+  box.innerHTML = operatorCommands.map(cmd => `
+    <article class="command-card" data-help="command" data-command-id="${escapeHtml(cmd.command_id)}">
+      <div>
+        <h3>${escapeHtml(cmd.title)}</h3>
+        <p>${escapeHtml(cmd.description)}</p>
+        <small>${escapeHtml(cmd.safety)}</small>
+      </div>
+      <button class="btn secondary" data-run-command="${escapeHtml(cmd.command_id)}">Запустить</button>
+    </article>
+  `).join('');
+  [...document.querySelectorAll('button[data-run-command]')].forEach(btn => {
+    btn.addEventListener('click', () => runOperatorCommand(btn.dataset.runCommand));
+  });
+}
+
+async function loadCommands() {
+  const payload = await api('/api/operator/commands');
+  renderOperatorCommands(payload.data.commands || []);
+  if (payload.data.jobs?.length) {
+    renderJob(payload.data.jobs[0]);
+  }
+}
+
+function renderJob(job) {
+  const level = job.status === 'ok' ? 'ok' : ['blocked', 'timeout', 'error'].includes(job.status) ? 'error' : '';
+  const stdout = job.stdout ? `<h4>stdout</h4><pre>${escapeHtml(job.stdout)}</pre>` : '';
+  const stderr = job.stderr ? `<h4>stderr</h4><pre>${escapeHtml(job.stderr)}</pre>` : '';
+  const error = job.error ? `<p class="job-error">${escapeHtml(job.error)}</p>` : '';
+  $('operatorJobResult').className = `job-output ${level}`;
+  $('operatorJobResult').innerHTML = `
+    <div class="job-head">
+      <strong>${escapeHtml(job.title || job.command_id)}</strong>
+      ${badge(job.status, job.status === 'ok' ? 'ok' : job.status === 'running' || job.status === 'queued' ? 'info' : 'danger')}
+    </div>
+    <p><strong>Команда:</strong> <code>${escapeHtml(job.command_display || '')}</code></p>
+    <p><strong>Job:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Exit:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>
+    ${error}${stdout}${stderr}
+  `;
+}
+
+async function pollJob(jobId) {
+  for (let i = 0; i < 60; i += 1) {
+    const payload = await api(`/api/operator/jobs/${encodeURIComponent(jobId)}`);
+    renderJob(payload.data.job);
+    if (!['queued', 'running'].includes(payload.data.job.status)) return;
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+}
+
+async function runOperatorCommand(commandId) {
+  const key = $('commandOperatorKey').value.trim();
+  const reason = $('commandReason').value.trim();
+  const resultBox = $('operatorJobResult');
+  if (!key || !reason) {
+    resultBox.className = 'job-output error';
+    resultBox.textContent = 'Нужны OPERATOR_API_KEY и причина запуска. Backend не примет команду без audit-причины.';
+    return;
+  }
+  const options = {};
+  if (commandId === 'bootstrap_db') {
+    options.seed_demo = $('seedDemoData').checked;
+  }
+  try {
+    resultBox.className = 'job-output';
+    resultBox.textContent = 'Команда отправлена в backend...';
+    const payload = await api(`/api/operator/commands/${encodeURIComponent(commandId)}/run`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': key,
+        'X-Idempotency-Key': `operator-command-${commandId}-${Date.now()}`,
+      },
+      body: JSON.stringify({ reason, options }),
+    });
+    renderJob(payload.data.job);
+    await pollJob(payload.data.job.job_id);
+    await loadAll();
+  } catch (err) {
+    resultBox.className = 'job-output error';
+    resultBox.textContent = err.message;
+  }
+}
+
 function renderDiagnostics(payload) {
   $('diagnosticJson').textContent = pretty(payload);
 }
@@ -180,6 +271,7 @@ async function loadAll() {
   renderSteps(data.steps);
   renderSymbols(data.symbols);
   renderActions(data.safe_actions);
+  renderOperatorCommands(data.operator_commands || operatorCommands);
   renderDiagnostics(payload);
 }
 
@@ -239,6 +331,7 @@ async function copyDiagnostics() {
 $('refreshBtn').addEventListener('click', () => loadAll().catch(showFatal));
 $('paperRunBtn').addEventListener('click', runPaper);
 $('toggleDiagBtn').addEventListener('click', toggleDiagnostics);
+$('reloadCommandsBtn').addEventListener('click', () => loadCommands().catch(showFatal));
 $('copyDiagBtn').addEventListener('click', copyDiagnostics);
 
 installContextHelp({
@@ -250,4 +343,4 @@ function showFatal(err) {
   document.body.insertAdjacentHTML('beforeend', `<div class="callout error" style="margin:20px">${escapeHtml(err.message)}</div>`);
 }
 
-loadAll().catch(showFatal);
+loadAll().then(loadCommands).catch(showFatal);

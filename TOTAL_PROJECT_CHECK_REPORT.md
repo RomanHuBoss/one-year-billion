@@ -245,3 +245,18 @@ Acceptance evidence:
 - `python main.py validate` — PASS, 90 passed.
 - JS syntax check для `frontend/js/context_help.js` и `frontend/js/app.js` — PASS.
 - Live/testnet preflight остаются fail-closed без PostgreSQL, Bybit runtime и Go/No-Go PASS.
+
+## Редакция: operator-command-center
+
+Проблема: оператору приходилось копировать команды из интерфейса в терминал, включая `./scripts/bootstrap_db.sh`, что снижало понятность работы и создавало ощущение, что система «ничего не делает».
+
+Решение:
+
+- shell-команда bootstrap заменена на `scripts/bootstrap_db.py`;
+- операторский интерфейс получил контролируемый backend command-center;
+- браузер не запускает произвольные команды, а вызывает allowlisted Python jobs backend;
+- все write-запуски требуют operator key, idempotency key и причину;
+- stdout/stderr показываются оператору прямо в интерфейсе;
+- live-submit этим механизмом не включается и не обходится.
+
+Статус проверки: `python main.py validate` — PASS, 93 теста пройдены.
