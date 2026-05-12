@@ -1,13 +1,23 @@
 from __future__ import annotations
-import math
+from decimal import Decimal, ROUND_FLOOR
 from app.schemas.domain import AccountSnapshot, InstrumentSpec, MarketSnapshot, SignalCandidate, SizingResult
 from app.risk_engine.cost_model import CostModel
 
 
 def floor_to_step(value: float, step: float) -> float:
+    """Округляет количество вниз по биржевому qtyStep без float-overrounding.
+
+    Для risk budget округление вверх недопустимо даже на 1 step: оно может
+    незаметно увеличить max_loss_if_stop. Decimal строится из строкового
+    представления, чтобы не тащить бинарную ошибку float в sizing.
+    """
+
     if step <= 0:
         raise ValueError('step must be positive')
-    return math.floor(value / step) * step
+    value_d = Decimal(str(value))
+    step_d = Decimal(str(step))
+    steps = (value_d / step_d).to_integral_value(rounding=ROUND_FLOOR)
+    return float(steps * step_d)
 
 
 def compute_sizing_after_rounding(

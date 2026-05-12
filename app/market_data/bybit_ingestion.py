@@ -43,7 +43,7 @@ def normalize_instrument(item: dict[str, Any], ttl_seconds: int = 3600) -> Instr
     )
 
 
-def normalize_orderbook(symbol: str, payload: dict[str, Any], funding_bps: float = 0.0, ttl_seconds: int = 10) -> MarketSnapshot:
+def normalize_orderbook(symbol: str, payload: dict[str, Any], funding_bps: float = 0.0, ttl_seconds: int = 10, funding_fresh: bool = False) -> MarketSnapshot:
     result = payload.get('result') or {}
     bids = result.get('b') or result.get('bids') or []
     asks = result.get('a') or result.get('asks') or []
@@ -65,6 +65,7 @@ def normalize_orderbook(symbol: str, payload: dict[str, Any], funding_bps: float
         spread_bps=spread_bps,
         depth_usdt=depth,
         funding_bps=funding_bps,
+        funding_fresh=funding_fresh,
         fetched_at=now,
         expires_at=now + timedelta(seconds=ttl_seconds),
     )
@@ -90,7 +91,7 @@ class BybitMarketDataIngestion:
             # funding не маскируется нулем, а fail-closed блокирует сделку.
             raise RuntimeError(f'{symbol}:funding_runtime_data_missing')
         funding_bps = _float_nested(rows[0].get('fundingRate')) * 10000
-        return normalize_orderbook(symbol, orderbook, funding_bps=funding_bps)
+        return normalize_orderbook(symbol, orderbook, funding_bps=funding_bps, funding_fresh=True)
 
     def fetch_account_snapshot(self, phase: int = 0) -> AccountSnapshot:
         wallet = self.adapter.get_wallet_balance()

@@ -1,5 +1,6 @@
 from app.backtest.engine import BacktestTrade, ExecutionAwareBacktester
 from app.risk_engine.cost_model import CostModel
+from app.risk_engine.position_sizing import floor_to_step
 
 
 def test_cost_model_includes_funding_buffer_monotonically():
@@ -17,3 +18,9 @@ def test_backtester_reports_net_not_gross_win_rate():
     assert report['net_pnl'] < 0
     assert report['win_rate_net'] == 0
     assert report['gross_only_valid'] is False
+
+
+def test_floor_to_step_never_rounds_up_from_float_noise():
+    assert floor_to_step(0.3, 0.1) == 0.3
+    assert floor_to_step(0.999999999999, 0.001) == 0.999
+    assert floor_to_step(1.000000000001, 0.001) == 1.0

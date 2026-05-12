@@ -30,7 +30,7 @@ python main.py validate
 - `OrderRouter` держит per-symbol lock, чтобы retry/idempotency не увеличивали exposure.
 - POST `/api/risk/approve` в live/testnet-live контуре требует operator key и `X-Idempotency-Key`, потому что создает `RiskDecision` для live order gate.
 
-## Live-gated порядок submit
+## Live-gated порядок отправки ордера
 
 `/api/execution/live-submit` не является shortcut к бирже. Последовательность обязательна:
 

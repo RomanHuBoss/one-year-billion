@@ -8,7 +8,7 @@ def base_objects():
     now = utc_now()
     account = AccountSnapshot(equity_usdt=500, available_balance_usdt=500, phase=0, fetched_at=now, expires_at=now+timedelta(minutes=5))
     specs = InstrumentSpec(symbol='BTCUSDT', tick_size=0.1, qty_step=0.001, min_qty=0.001, min_notional=5, max_leverage=100, specs_version='test', fetched_at=now, expires_at=now+timedelta(minutes=5))
-    market = MarketSnapshot(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, fetched_at=now, expires_at=now+timedelta(seconds=30))
+    market = MarketSnapshot(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, funding_fresh=True, fetched_at=now, expires_at=now+timedelta(seconds=30))
     signal = SignalCandidate(signal_id='s1', strategy='micro_grid', symbol='BTCUSDT', side=Side.BUY, entry_price=100000, stop_price=99000, invalidator='range_break', expected_gross_edge_bps=30, trace_id='t1', strategy_version='1', feature_hash='fh')
     ml = MLVerdict(verdict=MLVerdictType.ALLOW, required=False, block=False)
     return signal, ml, account, market, specs
@@ -88,3 +88,28 @@ def test_invalid_instrument_specs_fail_closed_without_exception():
     assert not rd.approved
     assert 'invalid_instrument_specs' in rd.reasons
     assert any(reason.startswith('sizing_failed:') for reason in rd.reasons)
+
+
+def test_stale_funding_rejected_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    market.funding_fresh = False
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'stale_funding' in rd.reasons
+
+
+def test_carry_live_rejected_in_phase_0_even_if_not_marked_shadow():
+    signal, ml, account, market, specs = base_objects()
+    signal.strategy = 'carry_live'
+    signal.shadow_only = False
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'strategy_shadow_only' in rd.reasons
+
+
+def test_forbidden_product_strategy_rejected_by_risk_engine():
+    signal, ml, account, market, specs = base_objects()
+    signal.strategy = 'martingale'
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'strategy_forbidden_product_scope' in rd.reasons

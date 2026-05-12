@@ -18,7 +18,7 @@
 
 ## Текущий статус готовности
 
-Редакция `1.7.0-total-project-check-live-gated` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
+Редакция `1.8.0-total-project-check-safety-gated` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
@@ -156,7 +156,7 @@ python main.py preflight --mode testnet
 5. Если preflight возвращает `blocked`, исправлять причины из `reasons` и `checks`. Это штатное поведение fail-closed.
 6. До live-submit записать только реальные evidence в PostgreSQL.
 
-## Live gate checklist
+## Чеклист live-gate
 
 Перед тем как `/api/execution/live-submit` сможет отправить order в Bybit, все условия должны быть выполнены:
 
@@ -187,13 +187,13 @@ DB-backed evidence обязательно. Env-флаги сами по себе
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":53}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":65}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by "<product-owner>"
 ```
 
 `python main.py preflight --mode live` должен вернуть `status: ok`. Если он возвращает `blocked`, live-submit корректно запрещен.
 
-## Hard invariants
+## Жесткие инварианты
 
 1. Нет approved non-expired `risk_decision_id` — нет order.
 2. Нет verified protection — нет ACTIVE position.

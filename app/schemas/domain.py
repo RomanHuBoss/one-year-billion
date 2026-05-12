@@ -80,6 +80,9 @@ class MarketSnapshot(BaseModel):
     spread_bps: float
     depth_usdt: float
     funding_bps: float = 0.0
+    # Funding является частью cost model. По умолчанию он считается не подтвержденным,
+    # чтобы ручное создание MarketSnapshot без runtime funding не проходило risk approval.
+    funding_fresh: bool = False
     volatility_bps: float = 0.0
     atr_pct: float = 0.0
     volume_z: float = 0.0

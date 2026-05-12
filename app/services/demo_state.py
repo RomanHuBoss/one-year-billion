@@ -21,9 +21,9 @@ class DemoState:
             'SOLUSDT': InstrumentSpec(symbol='SOLUSDT', tick_size=0.001, qty_step=0.1, min_qty=0.1, min_notional=5, max_leverage=75, specs_version='demo-v1', fetched_at=now, expires_at=now + timedelta(minutes=10)),
         }
         all_market = {
-            'BTCUSDT': MarketSnapshot(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.10, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
-            'ETHUSDT': MarketSnapshot(symbol='ETHUSDT', bid1=3000, ask1=3000.5, spread_bps=1.67, depth_usdt=2_000_000, atr_pct=0.012, volume_z=1.0, btc_aligned=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
-            'SOLUSDT': MarketSnapshot(symbol='SOLUSDT', bid1=150, ask1=150.02, spread_bps=1.33, depth_usdt=1_000_000, atr_pct=0.020, volume_z=0.8, btc_aligned=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
+            'BTCUSDT': MarketSnapshot(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.10, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, funding_fresh=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
+            'ETHUSDT': MarketSnapshot(symbol='ETHUSDT', bid1=3000, ask1=3000.5, spread_bps=1.67, depth_usdt=2_000_000, atr_pct=0.012, volume_z=1.0, btc_aligned=True, funding_fresh=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
+            'SOLUSDT': MarketSnapshot(symbol='SOLUSDT', bid1=150, ask1=150.02, spread_bps=1.33, depth_usdt=1_000_000, atr_pct=0.020, volume_z=0.8, btc_aligned=True, funding_fresh=True, fetched_at=now, expires_at=now + timedelta(seconds=20)),
         }
         self.specs = {s: all_specs[s] for s in self.symbols if s in all_specs}
         self.market = {s: all_market[s] for s in self.symbols if s in all_market}

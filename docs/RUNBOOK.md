@@ -12,7 +12,7 @@ python main.py
 
 Dashboard: `http://127.0.0.1:8000/`.
 
-## Paper pipeline
+## Бумажный контур
 
 Откройте `/` и нажмите **Запустить paper один раз** или вызовите endpoint:
 
@@ -123,7 +123,7 @@ python main.py preflight --mode testnet
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":41}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":65}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by <product-owner>
 ```
 

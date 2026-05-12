@@ -13,7 +13,7 @@ def _account(**kwargs):
 
 def _market(**kwargs):
     now = utc_now()
-    data = dict(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, fetched_at=now, expires_at=now+timedelta(seconds=30))
+    data = dict(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, funding_fresh=True, fetched_at=now, expires_at=now+timedelta(seconds=30))
     data.update(kwargs)
     return MarketSnapshot(**data)
 
@@ -46,3 +46,16 @@ def test_immediate_kill_switch_and_permissions():
     allowed, reason = strategy_allowed('micro_grid', Regime.DE_RISK, 0)
     assert not allowed
     assert reason == 'grid_forbidden_outside_range'
+
+
+def test_stale_funding_forces_no_trade_regime():
+    clf = RegimeClassifier()
+    decision = clf.classify(_market(funding_fresh=False), _account())
+    assert decision.regime == Regime.NO_TRADE
+    assert 'stale_market_account_or_funding' in decision.reasons
+
+
+def test_shadow_only_strategy_permissions_cover_carry_aliases():
+    allowed, reason = strategy_allowed('pair_statarb', Regime.RANGE, 0)
+    assert not allowed
+    assert reason == 'strategy_shadow_only_phase_0_1'

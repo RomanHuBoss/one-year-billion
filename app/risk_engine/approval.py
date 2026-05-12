@@ -7,6 +7,12 @@ from app.schemas.domain import AccountSnapshot, InstrumentSpec, MarketSnapshot, 
 from app.risk_engine.cost_model import CostModel
 from app.risk_engine.position_sizing import compute_sizing_after_rounding
 
+SHADOW_ONLY_STRATEGIES_PHASE_0_1 = {
+    'carry', 'carry_live', 'funding', 'funding_carry',
+    'pair_statarb', 'statarb', 'statarb_live', 'stat_arb',
+}
+FORBIDDEN_PRODUCT_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot'}
+
 
 @dataclass(frozen=True)
 class RiskConfig:
@@ -43,6 +49,7 @@ def approve_signal(
 
     fail_if(not account.fresh, 'stale_account_state')
     fail_if(not market.fresh, 'stale_orderbook')
+    fail_if(not market.funding_fresh, 'stale_funding')
     fail_if(signal.symbol.upper() != market.symbol.upper() or signal.symbol.upper() != specs.symbol.upper(), 'symbol_runtime_mismatch')
     fail_if(not specs.fresh or specs.category != 'linear' or specs.status != 'Trading', 'bad_instrument_specs')
     fail_if(specs.tick_size <= 0 or specs.qty_step <= 0 or specs.min_qty < 0 or specs.min_notional < 0 or specs.max_leverage <= 0, 'invalid_instrument_specs')
@@ -58,7 +65,9 @@ def approve_signal(
             fail_if(signal.stop_price >= signal.entry_price, 'invalid_buy_stop_direction')
         else:
             fail_if(signal.stop_price <= signal.entry_price, 'invalid_sell_stop_direction')
-    fail_if(signal.shadow_only, 'strategy_shadow_only')
+    strategy_name = signal.strategy.lower()
+    fail_if(strategy_name in FORBIDDEN_PRODUCT_STRATEGIES, 'strategy_forbidden_product_scope')
+    fail_if(signal.shadow_only or (account.phase <= 1 and strategy_name in SHADOW_ONLY_STRATEGIES_PHASE_0_1), 'strategy_shadow_only')
     fail_if(market.spread_bps > cfg.max_spread_bps, 'spread_too_wide')
     fail_if(market.depth_usdt < cfg.min_depth_usdt, 'depth_too_low')
     fail_if(account.position_mismatch, 'position_mismatch')

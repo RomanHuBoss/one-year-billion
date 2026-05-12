@@ -34,6 +34,14 @@
 - Усилен POST `/api/risk/approve` для live/testnet-live: требуется operator key и `X-Idempotency-Key`; повтор с тем же ключом возвращает сохраненный результат, повтор с другим payload блокируется.
 - Матрица трассируемости обновлена под текущую структуру проекта.
 
+## Дополнительные исправления редакции 1.8
+
+- Funding freshness выделен в отдельный fail-closed вход `MarketSnapshot.funding_fresh`; stale/missing funding теперь блокирует risk approval и переводит regime в `NO_TRADE`.
+- `RiskEngine` дополнительно запрещает live-маршрут carry/funding/stat-arb alias-стратегий в Phase 0/1 даже если candidate ошибочно не помечен `shadow_only`.
+- `RiskEngine` отдельно блокирует запрещенные продуктовые стратегии: martingale, DCA, spot/inverse/options, copy-trading и signal bot.
+- Округление `qty` по `qtyStep` переведено на `Decimal`, чтобы бинарная ошибка float не могла округлить позицию вверх и увеличить риск.
+- Добавлены regression-тесты на stale funding, forbidden/shadow-only strategies и Decimal floor-to-step.
+
 ## Что было реализовано ранее и сохранено
 
 - `/api/execution/live-submit` с hard gates.
@@ -58,7 +66,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-53 passed
+65 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present

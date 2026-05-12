@@ -17,7 +17,7 @@ def _regime(regime):
 
 def _market(**kwargs):
     now = utc_now()
-    data = dict(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, fetched_at=now, expires_at=now+timedelta(seconds=30))
+    data = dict(symbol='BTCUSDT', bid1=100000, ask1=100001, spread_bps=0.1, depth_usdt=5_000_000, atr_pct=0.015, volume_z=2.2, btc_aligned=True, funding_fresh=True, fetched_at=now, expires_at=now+timedelta(seconds=30))
     data.update(kwargs)
     return MarketSnapshot(**data)
 

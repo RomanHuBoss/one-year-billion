@@ -46,9 +46,9 @@ class RegimeClassifier:
             candidates.append(Regime.NEWS_RISK)
             reasons.append('llm_or_operator_news_risk')
             confidence = max(confidence, 0.8)
-        if not market.fresh or not account.fresh:
+        if not market.fresh or not account.fresh or not market.funding_fresh:
             candidates.append(Regime.NO_TRADE)
-            reasons.append('stale_market_or_account')
+            reasons.append('stale_market_account_or_funding')
             confidence = 1.0
         if market.oi_delta_pct <= -12.0 and market.volatility_bps > 120:
             candidates.append(Regime.LIQUIDATION)
@@ -141,7 +141,8 @@ class RegimeClassifier:
 
 
 def strategy_allowed(strategy: str, regime: Regime, phase: int) -> tuple[bool, str]:
-    if strategy in {'carry_live', 'statarb_live'} and phase <= 1:
+    strategy = strategy.lower()
+    if strategy in {'carry', 'carry_live', 'funding', 'funding_carry', 'pair_statarb', 'statarb', 'statarb_live', 'stat_arb'} and phase <= 1:
         return False, 'strategy_shadow_only_phase_0_1'
     if strategy == 'micro_grid' and regime != Regime.RANGE:
         return False, 'grid_forbidden_outside_range'
