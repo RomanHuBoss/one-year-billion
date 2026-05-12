@@ -103,10 +103,17 @@ def approve_signal(
     fail_if(sizing.max_loss_if_stop > daily_remaining_risk, 'daily_remaining_risk_exceeded')
     fail_if(sizing.max_loss_if_stop > weekly_remaining_risk, 'weekly_remaining_risk_exceeded')
     fail_if(sizing.effective_leverage > cfg.max_effective_leverage, 'leverage_cap')
+    portfolio_abs_after = account.portfolio_abs_notional_usdt + sizing.notional
+    # Даже если отдельный абсолютный portfolio cap не задан в YAML, max effective
+    # leverage остается hard cap для суммарной экспозиции портфеля.
+    fail_if(portfolio_abs_after / max(account.equity_usdt, 1e-9) > cfg.max_effective_leverage, 'leverage_cap')
     if cfg.max_portfolio_abs_notional_usdt is not None:
-        fail_if(account.portfolio_abs_notional_usdt + sizing.notional > cfg.max_portfolio_abs_notional_usdt, 'portfolio_abs_exposure_cap')
-    if cfg.max_beta_adjusted_exposure_usdt is not None:
-        fail_if(abs(account.beta_adjusted_exposure_usdt) + sizing.notional > cfg.max_beta_adjusted_exposure_usdt, 'beta_adjusted_exposure_cap')
+        fail_if(portfolio_abs_after > cfg.max_portfolio_abs_notional_usdt, 'portfolio_abs_exposure_cap')
+    # Beta cap тоже fail-closed по умолчанию через leverage cap. Snapshot хранит
+    # conservative absolute beta exposure; для Phase 0 это соответствует запрету
+    # на скрытую коррелированную экспозицию.
+    beta_cap = cfg.max_beta_adjusted_exposure_usdt if cfg.max_beta_adjusted_exposure_usdt is not None else account.equity_usdt * cfg.max_effective_leverage
+    fail_if(abs(account.beta_adjusted_exposure_usdt) + sizing.notional > beta_cap, 'beta_adjusted_exposure_cap')
     fail_if(sizing.reserve_cash_after_pct < cfg.reserve_cash_pct, 'reserve_cash_violation')
     fail_if(sizing.liquidation_distance_pct < max(cfg.min_liq_distance_pct, 2.5 * sizing.stop_distance_pct), 'liq_distance_too_close')
     fail_if(sizing.expected_net_edge_bps <= cfg.min_net_edge_bps, 'no_net_edge_after_costs')

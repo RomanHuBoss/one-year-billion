@@ -182,6 +182,7 @@ class BybitAdapter:
             'orderType': 'Market',
             'qty': qty,
             'reduceOnly': True,
+            'closeOnTrigger': True,
             'orderLinkId': order_link_id,
         }
         return self.place_order(payload)

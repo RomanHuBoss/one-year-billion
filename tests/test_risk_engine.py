@@ -113,3 +113,21 @@ def test_forbidden_product_strategy_rejected_by_risk_engine():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
     assert not rd.approved
     assert 'strategy_forbidden_product_scope' in rd.reasons
+
+
+def test_effective_leverage_uses_total_portfolio_exposure():
+    signal, ml, account, market, specs = base_objects()
+    account.portfolio_abs_notional_usdt = 1490
+    # Candidate by itself is tiny, but total portfolio exposure exceeds 3x equity.
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, max_effective_leverage=3.0))
+    assert not rd.approved
+    assert 'leverage_cap' in rd.reasons
+    assert rd.sizing.effective_leverage > 3.0
+
+
+def test_beta_adjusted_exposure_cap_defaults_to_effective_leverage_cap():
+    signal, ml, account, market, specs = base_objects()
+    account.beta_adjusted_exposure_usdt = 1490
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, max_effective_leverage=3.0))
+    assert not rd.approved
+    assert 'beta_adjusted_exposure_cap' in rd.reasons

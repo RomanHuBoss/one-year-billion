@@ -82,7 +82,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-80 passed
+84 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present
@@ -111,3 +111,52 @@ OK: no obvious secrets
 - Усилен `MicroGridStrategy`: hard stop, max_inventory=1, no_add_after_invalidation, ADX/funding gates; grid не становится DCA/martingale.
 - Входные ордера `OrderRouter` теперь maker-only `PostOnly` по умолчанию; reduce-only market payload получает `closeOnTrigger` where applicable.
 - Добавлены regression-тесты `tests/test_regime_classifier.py` и `tests/test_strategy_gates.py`.
+
+
+---
+
+## Редакция 3.0 — дополнительная проверка total_project_check
+
+Дата проверки: 2026-05-12.
+
+### Найденные и исправленные дефекты
+
+1. `app/risk_engine/position_sizing.py`: effective leverage теперь рассчитывается как `(существующая абсолютная портфельная экспозиция + новая заявка) / equity`, а не только по новой заявке. Это закрывает обход, при котором несколько небольших заявок могли пройти risk gate по отдельности, но суммарно превысить leverage cap.
+2. `app/risk_engine/approval.py`: добавлена hard-проверка суммарной portfolio exposure через `max_effective_leverage` даже без отдельного YAML portfolio cap; beta-adjusted exposure теперь также имеет fail-closed default cap через equity * max_effective_leverage.
+3. `app/strategies/micro_grid.py`: micro-grid больше не использует ATR как замену range bounds. Без явного `range_width_bps` стратегия не генерирует `SignalCandidate`, чтобы grid не превращался в скрытое усреднение/DCA против движения.
+4. `app/execution/bybit_adapter.py`: emergency reduce-only market exit теперь выставляет `closeOnTrigger=True` вместе с `reduceOnly=True`.
+5. Добавлены regression-тесты на portfolio leverage, beta exposure, обязательность explicit range width для micro-grid и `closeOnTrigger` на reduce-only exit.
+
+### Измененные файлы редакции 3.0
+
+- `app/risk_engine/position_sizing.py`
+- `app/risk_engine/approval.py`
+- `app/strategies/micro_grid.py`
+- `app/execution/bybit_adapter.py`
+- `tests/test_risk_engine.py`
+- `tests/test_strategy_gates.py`
+- `tests/test_bybit_adapter_safety.py`
+- `TOTAL_PROJECT_CHECK_REPORT.md`
+- `DELIVERY_REPORT.md`
+
+### Проверки редакции 3.0
+
+```text
+python -m pytest -q
+84 passed
+
+python main.py validate
+compileall: PASS
+pytest: 84 passed
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py preflight --mode testnet
+blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+### Итог редакции 3.0
+
+Статус не меняется: `test-ready`, `paper-ready` после подключения PostgreSQL/runtime data, `technical-live-ready` как live-gated кодовая база, `live-blocked` до внешних gates.

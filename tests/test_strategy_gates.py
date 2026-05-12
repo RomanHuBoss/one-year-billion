@@ -47,3 +47,8 @@ def test_micro_grid_evidence_prevents_martingale_shape():
 def test_micro_grid_rejects_trending_adx():
     strat = MicroGridStrategy()
     assert strat.propose(_market(range_width_bps=40, adx=30), _account(), _regime(Regime.RANGE)) == []
+
+
+def test_micro_grid_requires_explicit_range_width():
+    strat = MicroGridStrategy()
+    assert strat.propose(_market(range_width_bps=None, adx=12), _account(), _regime(Regime.RANGE)) == []

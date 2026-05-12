@@ -12,7 +12,13 @@ class MicroGridStrategy(Strategy):
     def propose(self, market: MarketSnapshot, account: AccountSnapshot, regime: RegimeDecision) -> list[SignalCandidate]:
         if regime.regime != Regime.RANGE:
             return []
-        range_width_bps = float(market.range_width_bps) if market.range_width_bps is not None else max(market.atr_pct * 10000, 1.0)
+        # Нельзя подменять range bounds ATR-аппроксимацией: micro-grid без
+        # подтвержденного диапазона превращается в неявное усреднение против
+        # движения. Поэтому explicit range_width_bps является обязательным
+        # признаком вычисленных range bounds из закрытых свечей.
+        if market.range_width_bps is None:
+            return []
+        range_width_bps = float(market.range_width_bps)
         # Grid допустим только как bounded mean-reversion: hard stop, max inventory=1,
         # запрет добавления после invalidation и ширина диапазона больше costs+buffer.
         if range_width_bps <= (market.spread_bps + 8.0):

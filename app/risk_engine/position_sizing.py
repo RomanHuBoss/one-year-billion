@@ -43,7 +43,11 @@ def compute_sizing_after_rounding(
     notional = qty * entry
     estimated_exit_costs = notional * (cost_model.round_trip_cost_bps(market.spread_bps, taker=False, funding_bps=market.funding_bps) / 10000.0)
     max_loss_if_stop = qty * stop_distance_abs + estimated_exit_costs
-    effective_leverage = notional / max(account.equity_usdt, 1e-9)
+    total_abs_notional_after = account.portfolio_abs_notional_usdt + notional
+    # Effective leverage по спецификации считается по всему портфелю, а не только
+    # по новой заявке. Иначе вторая/третья заявка могла бы пройти risk gate,
+    # хотя суммарная экспозиция уже превышает phase cap.
+    effective_leverage = total_abs_notional_after / max(account.equity_usdt, 1e-9)
     # Резерв считается после conservative initial margin estimate. Старый вариант
     # вычитал только costs и мог пропустить позицию, которая формально укладывалась
     # в risk_usdt, но фактически съедала весь свободный баланс малого счета.
