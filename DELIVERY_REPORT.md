@@ -297,3 +297,21 @@ secret scan: PASS
 node --check frontend/js/api_client.js
 node --check frontend/js/app.js
 ```
+
+## Редакция 7.1 — исправление статусов операционных команд и preflight без migrations
+
+Исправлены проблемы, выявленные при запуске команд из операторского экрана на Windows:
+
+- `validate` больше не зависит от hardcoded `OPERATOR_API_KEY` в тестах. Тесты берут ключ из текущих runtime-настроек, поэтому пользовательский `.env` не ломает локальную проверку.
+- `preflight_testnet` и `preflight_live` больше не падают traceback, если PostgreSQL доступен, но migrations еще не применены и таблиц `incidents` / `go_no_go_evidence` нет. Теперь возвращается понятный `status=blocked` с reasons:
+  - `incidents_table_missing_or_migrations_not_applied`;
+  - `go_no_go_tables_missing_or_migrations_not_applied`.
+- Операционный центр больше не показывает зеленый `ok`, если CLI вывел `status=blocked`, traceback или pytest failures. Такие задания маркируются как `blocked` / `error`.
+- Добавлены regression-тесты на оба сценария.
+
+Проверка:
+
+```bash
+python main.py validate
+# 97 passed
+```

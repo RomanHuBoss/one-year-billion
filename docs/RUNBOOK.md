@@ -143,3 +143,14 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 ```
 
 Если live-submit получил неоднозначный REST failure после резервирования order, order переводится в `ERROR_RECONCILIATION_REQUIRED`. Не повторяйте submit с новым idempotency key, пока reconciliation не подтвердит состояние биржи.
+
+## Диагностика Операционного центра
+
+Если команда вернула traceback, это не должно отображаться как `ok`. Актуальная логика статусов такая:
+
+- `ok` — команда реально завершилась успешно;
+- `blocked` — проверка штатно заблокирована fail-closed, например нет evidence или PostgreSQL не готов;
+- `error` — traceback, pytest failure или ошибка исполнения;
+- `timeout` — команда не завершилась за допустимое время.
+
+Если PostgreSQL уже запущен, но preflight пишет, что таблица `incidents` или `go_no_go_evidence` отсутствует, сначала выполните из интерфейса **PostgreSQL: применить migrations**. Это нормальный первый шаг, а не повод включать live вручную.

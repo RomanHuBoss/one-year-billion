@@ -1,7 +1,8 @@
 from fastapi.testclient import TestClient
 from app.main import app
 
-DEFAULT_OPERATOR_KEY = 'change-' + 'me-long-random-key'
+def _operator_key():
+    return app.state.settings.operator_api_key
 
 
 def test_operator_dashboard_returns_human_readable_operator_model():
@@ -83,7 +84,7 @@ def test_operator_commands_endpoint_is_allowlist_and_write_requires_operator_key
 
     accepted = client.post(
         '/api/operator/commands/preflight_testnet/run',
-        headers={'x-api-key': DEFAULT_OPERATOR_KEY, 'X-Idempotency-Key': 'cmd-test-preflight'},
+        headers={'x-api-key': _operator_key(), 'X-Idempotency-Key': 'cmd-test-preflight'},
         json={'reason': 'pytest проверяет allowlisted command runner', 'options': {}},
     )
     assert accepted.status_code == 200
@@ -95,7 +96,7 @@ def test_operator_commands_endpoint_is_allowlist_and_write_requires_operator_key
 
     blocked = client.post(
         '/api/operator/commands/rm_rf/run',
-        headers={'x-api-key': DEFAULT_OPERATOR_KEY, 'X-Idempotency-Key': 'cmd-test-forbidden'},
+        headers={'x-api-key': _operator_key(), 'X-Idempotency-Key': 'cmd-test-forbidden'},
         json={'reason': 'pytest checks forbidden arbitrary command', 'options': {}},
     )
     assert blocked.status_code == 404
@@ -116,7 +117,7 @@ def test_operator_command_accepts_browser_text_plain_json_body_after_header_bug(
     client = TestClient(app)
     accepted = client.post(
         '/api/operator/commands/preflight_testnet/run',
-        headers={'x-api-key': DEFAULT_OPERATOR_KEY, 'X-Idempotency-Key': 'cmd-test-text-body'},
+        headers={'x-api-key': _operator_key(), 'X-Idempotency-Key': 'cmd-test-text-body'},
         data='{"reason":"Первичная проверка проекта","options":{}}',
     )
     assert accepted.status_code == 200, accepted.text
@@ -132,3 +133,32 @@ def test_api_client_preserves_content_type_when_custom_headers_are_added():
     assert "'Content-Type': 'application/json'" in api_client
     assert '...optionHeaders' in api_client
     assert "headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },\n    ...options" not in api_client
+
+
+def test_operator_job_status_does_not_hide_traceback_or_blocked_json():
+    runner = app.state.operator_jobs
+    assert runner._derive_status(0, '{"status":"blocked","reasons":["x"]}', '') == 'blocked'
+    assert runner._derive_status(0, '', 'Traceback (most recent call last):\nboom') == 'error'
+    assert runner._derive_status(1, 'pytest output', '') == 'blocked'
+
+
+def test_live_preflight_missing_schema_returns_blocked_not_traceback():
+    from app.live.preflight import run_live_preflight
+
+    class BrokenRepository:
+        def unresolved_critical_high(self):
+            raise RuntimeError('relation "incidents" does not exist')
+
+        def live_evidence_status(self, *_args):
+            raise RuntimeError('relation "go_no_go_evidence" does not exist')
+
+    result = run_live_preflight(
+        settings=app.state.settings,
+        runtime=app.state.runtime_config,
+        db_available=True,
+        repository=BrokenRepository(),
+    )
+    assert result.status == 'blocked'
+    assert 'incidents_table_missing_or_migrations_not_applied' in result.reasons
+    assert 'go_no_go_tables_missing_or_migrations_not_applied' in result.reasons
+    assert 'unresolved_critical_high_error' in result.data

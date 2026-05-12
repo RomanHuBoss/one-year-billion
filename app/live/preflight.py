@@ -2,6 +2,23 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 from typing import Any
+
+
+def _safe_repository_call(reasons: list[str], data: dict[str, Any], check_name: str, reason_code: str, func, default):
+    """Выполняет DB/evidence check без traceback в операторском интерфейсе.
+
+    Если PostgreSQL доступен, но migrations еще не применены, preflight должен
+    вернуть понятный BLOCKED с причиной, а не падать stack trace-ом.
+    Это особенно важно для первого запуска, когда оператор сначала видит
+    testnet/live preflight, а только потом применяет migrations из UI.
+    """
+
+    try:
+        return func()
+    except Exception as exc:  # pragma: no cover - зависит от внешней БД и версии schema.
+        reasons.append(reason_code)
+        data[f'{check_name}_error'] = f'{type(exc).__name__}:{exc}'
+        return default
 from app.core.settings import Settings
 from app.execution.bybit_adapter import BybitAdapter, BybitConfig
 
@@ -116,11 +133,22 @@ def run_live_preflight(settings: Settings, runtime, db_available: bool, reposito
         reasons.append('go_no_go_pass_and_approver_required')
 
     if repository is not None:
-        open_high = repository.unresolved_critical_high()
-        checks['unresolved_critical_high_zero'] = len(open_high) == 0
-        data['unresolved_critical_high_count'] = len(open_high)
-        if open_high:
-            reasons.append('unresolved_critical_high_incidents')
+        open_high = _safe_repository_call(
+            reasons,
+            data,
+            'unresolved_critical_high',
+            'incidents_table_missing_or_migrations_not_applied',
+            repository.unresolved_critical_high,
+            default=None,
+        )
+        if open_high is None:
+            checks['unresolved_critical_high_zero'] = False
+            data['unresolved_critical_high_count'] = None
+        else:
+            checks['unresolved_critical_high_zero'] = len(open_high) == 0
+            data['unresolved_critical_high_count'] = len(open_high)
+            if open_high:
+                reasons.append('unresolved_critical_high_incidents')
     else:
         checks['unresolved_critical_high_zero'] = not settings.require_db_for_live
         if settings.require_db_for_live:
@@ -128,7 +156,18 @@ def run_live_preflight(settings: Settings, runtime, db_available: bool, reposito
 
     if settings.require_go_nogo_for_live:
         if repository is not None and hasattr(repository, 'live_evidence_status'):
-            evidence_ok, evidence_reasons, evidence_data = repository.live_evidence_status(settings.min_paper_days_required, runtime.config_hash)
+            evidence_result = _safe_repository_call(
+                reasons,
+                data,
+                'go_no_go_evidence',
+                'go_no_go_tables_missing_or_migrations_not_applied',
+                lambda: repository.live_evidence_status(settings.min_paper_days_required, runtime.config_hash),
+                default=None,
+            )
+            if evidence_result is None:
+                evidence_ok, evidence_reasons, evidence_data = False, [], {'schema_ready': False}
+            else:
+                evidence_ok, evidence_reasons, evidence_data = evidence_result
             checks['go_no_go_evidence_verified'] = evidence_ok
             data['go_no_go_evidence'] = evidence_data
             reasons.extend(evidence_reasons)

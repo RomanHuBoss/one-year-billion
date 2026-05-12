@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock, Thread
 from typing import Any, Callable
+import json
 import os
 import re
 import subprocess
@@ -180,7 +181,7 @@ class OperatorJobRunner:
             )
             stdout = self._redact(completed.stdout)[-12000:]
             stderr = self._redact(completed.stderr)[-12000:]
-            status = 'ok' if completed.returncode == 0 else 'blocked'
+            status = self._derive_status(completed.returncode, stdout, stderr)
             with self._lock:
                 job = self._jobs[job_id]
                 job.status = status
@@ -204,6 +205,40 @@ class OperatorJobRunner:
                 job.exit_code = 1
                 job.error = self._redact(f'{type(exc).__name__}:{exc}')
                 job.finished_at = _utc_now()
+
+
+    def _derive_status(self, returncode: int, stdout: str, stderr: str) -> str:
+        """Переводит результат CLI в понятный операторский статус.
+
+        Некоторые проверки специально печатают JSON со status=blocked. Даже если
+        wrapper вернул 0, оператор не должен видеть зеленый OK. Traceback/pytest
+        failures также не должны маскироваться как успешная команда.
+        """
+
+        combined = f'{stdout}\n{stderr}'
+        if 'Traceback (most recent call last):' in combined or 'FAILURES' in combined or 'FAILED ' in combined:
+            return 'error'
+        parsed = self._extract_last_json(stdout)
+        if isinstance(parsed, dict) and str(parsed.get('status', '')).lower() == 'blocked':
+            return 'blocked'
+        if returncode == 0:
+            return 'ok'
+        return 'blocked'
+
+    def _extract_last_json(self, text: str) -> dict[str, Any] | None:
+        text = (text or '').strip()
+        if not text:
+            return None
+        # CLI может печатать служебные строки перед JSON. Берем последний объект.
+        for idx in range(len(text) - 1, -1, -1):
+            if text[idx] != '{':
+                continue
+            try:
+                value = json.loads(text[idx:])
+            except json.JSONDecodeError:
+                continue
+            return value if isinstance(value, dict) else None
+        return None
 
     def _redact(self, text: str) -> str:
         out = text or ''
