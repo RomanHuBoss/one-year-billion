@@ -22,7 +22,7 @@ def main() -> int:
         print('unsafe_phase_config:', ';'.join(phase_reasons), file=sys.stderr)
         return 2
     print('config_hash=', runtime.config_hash)
-    run([sys.executable, '-m', 'compileall', '-q', 'app', 'scripts', 'tests', 'universe'])
+    run([sys.executable, '-m', 'compileall', '-q', 'main.py', 'app', 'scripts', 'tests', 'universe'])
     run([sys.executable, '-m', 'pytest', '-q'])
     run([sys.executable, 'scripts/check_strategy_imports.py'])
     run([sys.executable, 'scripts/check_migrations_static.py'])

@@ -1,4 +1,4 @@
-// Visual mapping only. Status, reasons and allowed actions come from backend.
+// Только визуальное отображение. Status, reasons и allowed actions приходят из backend.
 export function statusClass(row) {
   if (row.status_effective === 'ACTIVE') return 'ok';
   if (row.status_effective === 'ERROR_RECONCILIATION_REQUIRED') return 'critical';

@@ -10,37 +10,37 @@
   <header class="topbar">
     <div>
       <h1>Crypto Acceleration System 2026</h1>
-      <p>Bybit Linear USDT Futures only · backend status source of truth</p>
+      <p>Только Bybit Linear USDT Futures · источник статуса — backend</p>
     </div>
     <button id="refreshBtn">Обновить</button>
   </header>
 
   <main>
     <section class="grid cards">
-      <article class="card"><h2>Health</h2><pre id="health">loading...</pre></article>
-      <article class="card"><h2>Risk</h2><pre id="risk">loading...</pre></article>
-      <article class="card"><h2>ML</h2><pre id="ml">loading...</pre></article>
-      <article class="card"><h2>Runtime preflight</h2><pre id="runtime">loading...</pre></article>
+      <article class="card"><h2>Состояние</h2><pre id="health">загрузка...</pre></article>
+      <article class="card"><h2>Риск</h2><pre id="risk">загрузка...</pre></article>
+      <article class="card"><h2>ML</h2><pre id="ml">загрузка...</pre></article>
+      <article class="card"><h2>Runtime-проверка</h2><pre id="runtime">загрузка...</pre></article>
     </section>
 
     <section class="card">
-      <h2>Symbols</h2>
+      <h2>Символы</h2>
       <p class="hint">Таблица и карточка ниже используют один backend status_effective без локального пересчета.</p>
       <table>
-        <thead><tr><th>Symbol</th><th>Status</th><th>Severity</th><th>Reasons</th><th>Trace</th><th>Allowed actions</th></tr></thead>
+        <thead><tr><th>Символ</th><th>Статус</th><th>Серьезность</th><th>Причины</th><th>Trace</th><th>Разрешенные действия</th></tr></thead>
         <tbody id="symbolsBody"></tbody>
       </table>
     </section>
 
     <section class="card">
-      <h2>Symbol details</h2>
-      <pre id="symbolDetails">select symbol</pre>
+      <h2>Детали символа</h2>
+      <pre id="symbolDetails">выберите символ</pre>
     </section>
 
     <section class="card">
-      <h2>Paper pipeline</h2>
-      <button id="paperRunBtn">Run paper once</button>
-      <pre id="paperResult">not started</pre>
+      <h2>Paper-конвейер</h2>
+      <button id="paperRunBtn">Запустить paper один раз</button>
+      <pre id="paperResult">не запускался</pre>
     </section>
   </main>
 

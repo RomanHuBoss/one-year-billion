@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
     phase_reasons = startup_phase_validation(runtime_config.raw)
     if phase_reasons:
         raise RuntimeError('unsafe_phase_config:' + ';'.join(phase_reasons))
-    app = FastAPI(title=settings.app_name, version='1.4.0-live-gated', lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, version='1.5.0-cli-ru-live-gated', lifespan=lifespan)
     app.state.settings = settings
     app.state.runtime_config = runtime_config
     app.state.demo_state = DemoState(symbols=runtime_config.live_universe, phase=runtime_config.phase)
