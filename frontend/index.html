@@ -12,7 +12,7 @@
       <div class="brand-mark">CAS</div>
       <div>
         <h1>Операторский модуль</h1>
-        <p>Crypto Acceleration System 2026 · только Bybit Linear USDT Futures</p>
+        <p>Crypto Acceleration System 2026 · только Bybit Linear USDT Futures · source of truth: backend status_effective</p>
       </div>
     </div>
     <div class="header-actions">
@@ -22,73 +22,65 @@
     </div>
   </header>
 
-  <main class="shell">
+  <main class="shell compact">
     <section id="hero" class="hero-card loading" data-help="hero">
       <div>
-        <p class="eyebrow">Текущее состояние</p>
+        <p class="eyebrow">Главный статус</p>
         <h2 id="heroTitle">Загрузка состояния...</h2>
         <p id="heroMessage" class="hero-message">Получаем данные из backend.</p>
       </div>
       <div class="hero-next">
         <span>Что делать сейчас</span>
         <strong id="nextStep">подождать</strong>
+        <div class="hero-actions">
+          <button id="paperRunBtn" class="btn secondary">Paper один раз</button>
+          <button id="toggleDiagBtn" class="btn ghost">Диагностика</button>
+        </div>
       </div>
     </section>
 
-    <section class="toolbar-card" data-help="toolbar">
-      <div>
-        <h2>Быстрый тест</h2>
-        <p>Безопасные проверки. Они не открывают live-сделки. Правая кнопка по любому блоку → «Вызвать справку».</p>
+    <section class="panel status-strip-panel" data-help="readiness">
+      <div class="panel-heading compact-heading">
+        <div>
+          <h2>Панель допуска</h2>
+          <p>Короткая сводка gate. Подробности — в плане, блокерах и деталях символа.</p>
+        </div>
       </div>
-      <div class="toolbar-actions">
-        <button id="paperRunBtn" class="btn secondary">Paper один раз</button>
-        <button id="toggleDiagBtn" class="btn ghost">Показать диагностику</button>
-      </div>
+      <div id="cards" class="cards-grid compact-cards"></div>
     </section>
 
-
-
-    <section class="panel" data-help="commands">
+    <section class="panel command-workbench" data-help="commands">
       <div class="panel-heading horizontal">
         <div>
-          <h2>Операционный центр</h2>
-          <p>Запускает разрешенные backend-команды без терминала: validate, preflight и PostgreSQL migrations. Произвольной shell-команды здесь нет.</p>
+          <h2>Операционный центр: план и запуск</h2>
+          <p>Команды запускаются прямо с карточек плана. Браузер не получает shell; backend выполняет только allowlist-команды. Правая кнопка по любому блоку → «Вызвать справку».</p>
         </div>
         <button id="reloadCommandsBtn" class="btn ghost">Обновить команды</button>
       </div>
-      <div class="command-form">
+      <div class="command-form compact-form">
         <label>
           Ключ оператора
           <input id="commandOperatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
         </label>
         <label>
           Причина запуска
-          <textarea id="commandReason" rows="3" placeholder="Например: первичная настройка PostgreSQL, проверка перед testnet, контроль перед live preflight..."></textarea>
+          <input id="commandReason" type="text" placeholder="Например: первичная проверка проекта / миграции PostgreSQL / testnet preflight" />
         </label>
         <label class="checkbox-label">
           <input id="seedDemoData" type="checkbox" />
-          Добавить demo seed при bootstrap DB
+          Demo seed для bootstrap DB
         </label>
       </div>
-      <div id="operatorCommands" class="command-center"></div>
+      <div id="operatorCommands" class="command-center-summary" data-help="commands">Команды загружаются...</div>
+      <div id="steps" class="stepper dense-stepper" data-help="steps"></div>
       <div id="operatorJobResult" class="job-output empty-state">Команды еще не запускались.</div>
     </section>
 
-    <section data-help="readiness">
-      <div class="section-heading">
-        <div>
-          <h2>Панель допуска</h2>
-          <p>Ключевые gate без сырого JSON и без догадок во frontend.</p>
-        </div>
-      </div>
-      <div id="cards" class="cards-grid"></div>
-    </section>
-
-    <section class="two-column">
+    <section class="operations-grid">
       <article class="panel" data-help="blockers">
         <div class="panel-heading">
           <h2>Что мешает запуску</h2>
-          <p>Исправляйте сверху вниз. Если список пустой, смотрите план перехода.</p>
+          <p>Причины backend. Исправили — повторите нужную проверку.</p>
         </div>
         <div id="blockers" class="blocker-list"></div>
       </article>
@@ -96,28 +88,18 @@
       <article class="panel" data-help="limits">
         <div class="panel-heading">
           <h2>Настройки Phase 0</h2>
-          <p>Ограничения малого счета, которые оператор не должен обходить.</p>
+          <p>Ограничения малого счета, которые нельзя обходить.</p>
         </div>
-        <dl id="limits" class="limit-list"></dl>
+        <dl id="limits" class="limit-list compact-limits"></dl>
       </article>
     </section>
 
-    <section class="panel" data-help="steps">
-      <div class="panel-heading horizontal">
-        <div>
-          <h2>План перехода от теста к live</h2>
-          <p>Live разрешен только после полного PASS. Заблокированный preflight до этого — нормальное состояние.</p>
-        </div>
-      </div>
-      <div id="steps" class="stepper"></div>
-    </section>
-
-    <section class="symbols-layout">
+    <section class="symbols-layout compact-symbols">
       <article class="panel symbols-panel" data-help="symbols">
         <div class="panel-heading horizontal">
           <div>
             <h2>Символы</h2>
-            <p>Статус берется из backend `status_effective`. Карточка и список используют один объект.</p>
+            <p>Список и карточка ниже используют один backend status_effective.</p>
           </div>
         </div>
         <div id="symbols" class="symbol-list"></div>
@@ -126,7 +108,7 @@
       <aside class="panel symbol-details" data-help="symbolDetails">
         <div class="panel-heading">
           <h2>Детали символа</h2>
-          <p>Причины и разрешенные действия понятным языком.</p>
+          <p>Причины, trace_id и разрешенные safe-actions.</p>
         </div>
         <div id="symbolDetails" class="empty-state">Выберите символ слева.</div>
       </aside>
@@ -136,27 +118,27 @@
       <div class="panel-heading horizontal">
         <div>
           <h2>Безопасные действия оператора</h2>
-          <p>Разрешены только действия, которые снижают риск или не увеличивают его. Открытия сделки из интерфейса нет.</p>
+          <p>Только действия, которые снижают риск или не увеличивают его. Открытия сделки из интерфейса нет.</p>
         </div>
       </div>
-      <div class="action-form">
+      <div class="action-form compact-form">
         <label>
           Ключ оператора
           <input id="operatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
         </label>
         <label>
           Причина действия
-          <textarea id="actionReason" rows="3" placeholder="Например: testnet-проверка, отмена входов перед рестартом, сверка после incident..."></textarea>
+          <input id="actionReason" type="text" placeholder="Например: отмена входов перед рестартом / сверка после incident" />
         </label>
       </div>
-      <div id="safeActions" class="safe-actions"></div>
+      <div id="safeActions" class="safe-actions compact-actions"></div>
       <div id="actionResult" class="callout hidden"></div>
     </section>
 
     <section class="panel" data-help="paper">
       <div class="panel-heading">
         <h2>Результат paper-теста</h2>
-        <p>Здесь показывается краткое резюме последнего запуска. Полный JSON спрятан в диагностике.</p>
+        <p>Краткое резюме последнего paper-запуска. Полный JSON — в диагностике.</p>
       </div>
       <div id="paperSummary" class="paper-summary empty-state">Paper еще не запускался.</div>
     </section>

@@ -69,18 +69,40 @@ function renderLimits(limits) {
   $('limits').innerHTML = rows.map(([k, v]) => `<div data-help="limit" data-help-key="${escapeHtml(k)}" data-help-value="${escapeHtml(v)}"><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
 }
 
+function stepAction(step) {
+  if (step.command_id) {
+    return `<button class="btn tiny secondary" data-run-command="${escapeHtml(step.command_id)}">Запустить</button>`;
+  }
+  if (step.id === 'paper_shadow') {
+    return '<button class="btn tiny secondary" data-paper-step="true">Paper один раз</button>';
+  }
+  return '<span class="step-note">ручная фиксация evidence</span>';
+}
+
 function renderSteps(steps) {
   const stateLabel = { ok: 'PASS', todo: 'НУЖНО', blocked: 'БЛОК', manual: 'ПРОВЕРИТЬ' };
   const stateLevel = { ok: 'ok', todo: 'warning', blocked: 'danger', manual: 'info' };
   $('steps').innerHTML = steps.map(step => `
-    <article class="step-card ${escapeHtml(step.state)}" data-help="step" data-help-id="${escapeHtml(step.id)}">
-      ${badge(stateLabel[step.state] || step.state, stateLevel[step.state] || 'info')}
+    <article class="step-card ${escapeHtml(step.state)}" data-help="step" data-help-id="${escapeHtml(step.id)}" data-command-id="${escapeHtml(step.command_id || '')}">
+      <div class="step-top">
+        ${badge(stateLabel[step.state] || step.state, stateLevel[step.state] || 'info')}
+        ${stepAction(step)}
+      </div>
       <h3>${escapeHtml(step.title)}</h3>
       <p>${escapeHtml(step.explain)}</p>
       <p><strong>PASS:</strong> ${escapeHtml(step.pass_when)}</p>
-      <code class="command">${escapeHtml(step.command)}</code>
+      <div class="command-line">
+        <code class="command">${escapeHtml(step.command)}</code>
+        ${step.command_id ? `<button class="btn icon-run" title="Запустить команду" data-run-command="${escapeHtml(step.command_id)}">▶</button>` : ''}
+      </div>
     </article>
   `).join('');
+  [...document.querySelectorAll('button[data-run-command]')].forEach(btn => {
+    btn.addEventListener('click', () => runOperatorCommand(btn.dataset.runCommand));
+  });
+  [...document.querySelectorAll('button[data-paper-step]')].forEach(btn => {
+    btn.addEventListener('click', runPaper);
+  });
 }
 
 function renderSymbols(symbols) {
@@ -156,22 +178,11 @@ function renderOperatorCommands(commands) {
   operatorCommands = commands || [];
   const box = $('operatorCommands');
   if (!operatorCommands.length) {
-    box.innerHTML = '<div class="empty-state">Backend не вернул доступных операторских команд.</div>';
+    box.textContent = 'Backend не вернул доступных операторских команд.';
     return;
   }
-  box.innerHTML = operatorCommands.map(cmd => `
-    <article class="command-card" data-help="command" data-command-id="${escapeHtml(cmd.command_id)}">
-      <div>
-        <h3>${escapeHtml(cmd.title)}</h3>
-        <p>${escapeHtml(cmd.description)}</p>
-        <small>${escapeHtml(cmd.safety)}</small>
-      </div>
-      <button class="btn secondary" data-run-command="${escapeHtml(cmd.command_id)}">Запустить</button>
-    </article>
-  `).join('');
-  [...document.querySelectorAll('button[data-run-command]')].forEach(btn => {
-    btn.addEventListener('click', () => runOperatorCommand(btn.dataset.runCommand));
-  });
+  const names = operatorCommands.map(cmd => cmd.title).join(' · ');
+  box.textContent = `Доступные backend-команды: ${names}. Запускайте их кнопками прямо в карточках плана.`;
 }
 
 async function loadCommands() {

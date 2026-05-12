@@ -151,3 +151,27 @@ python main.py preflight --mode testnet
 | `timeout` | Команда зависла или не уложилась во время | Проверьте PostgreSQL, сеть, зависимости и повторите |
 
 Если preflight показывает `incidents_table_missing_or_migrations_not_applied` или `go_no_go_tables_missing_or_migrations_not_applied`, нажмите **PostgreSQL: применить migrations**. До этого live-проверка не обязана проходить.
+
+## Обновление интерфейса: меньше дублей, команды прямо в плане
+
+Новая компоновка экрана устроена так:
+
+1. **Главный статус** — один верхний ответ: что происходит и что делать сейчас.
+2. **Панель допуска** — короткие компактные индикаторы, а не отдельный большой отчет.
+3. **Операционный центр: план и запуск** — единый блок вместо двух дублирующих разделов. Команда показана в черном поле, а справа от нее есть кнопка запуска `▶`. Если кнопки нет, значит шаг требует ручной записи evidence или длительного paper/shadow периода.
+4. **Что мешает запуску** и **Настройки Phase 0** — рядом, чтобы не тратить вертикальное место.
+5. **Символы** и **Детали символа** — рядом: выбрали пару слева, расшифровку сразу видите справа.
+
+### Как запускать команду из карточки плана
+
+1. В блоке **Операционный центр: план и запуск** введите `OPERATOR_API_KEY`.
+2. Введите причину запуска. Пример: `проверка после исправления тестов`, `применение миграций PostgreSQL`, `testnet preflight после настройки ключей`.
+3. На нужной карточке нажмите **Запустить** или кнопку `▶` рядом с черным полем команды.
+4. Дождитесь результата в блоке под планом.
+5. Если статус `blocked`, смотрите `reasons`. Если статус `error`, исправляйте traceback/pytest failure; live запрещен.
+
+### Testnet preflight больше не требует live Go/No-Go
+
+`python main.py preflight --mode testnet` теперь проверяет именно testnet readiness. Он не должен требовать `CAS_ENABLE_LIVE_SUBMIT`, live Go/No-Go и 14 дней paper evidence. Если testnet preflight заблокирован, причины должны быть уровня: нет PostgreSQL, нет testnet Bybit credentials, не выбран testnet endpoint, не применены migrations или есть unresolved incidents.
+
+`python main.py preflight --mode live` остается строгим live gate и обязан требовать DB, Bybit runtime, paper/shadow evidence, security/CI/reconciliation evidence, signed Go/No-Go и отсутствие unresolved CRITICAL/HIGH.

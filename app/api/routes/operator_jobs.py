@@ -32,6 +32,8 @@ def _parse_command_request(body: Any) -> OperatorCommandRequest:
     try:
         if isinstance(body, OperatorCommandRequest):
             return body
+        if isinstance(body, (bytes, bytearray)):
+            return OperatorCommandRequest.model_validate_json(body.decode('utf-8'))
         if isinstance(body, str):
             return OperatorCommandRequest.model_validate_json(body)
         if isinstance(body, dict):

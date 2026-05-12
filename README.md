@@ -18,7 +18,7 @@
 
 ## Текущий статус готовности
 
-Редакция `1.8.0-total-project-check-safety-gated` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
+Редакция `2.2.0-operator-ux-command-plan` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
@@ -37,6 +37,7 @@ python main.py serve --host 127.0.0.1 --port 8000
 python main.py serve --mode testnet
 python main.py validate
 python main.py preflight --mode testnet
+python scripts/bootstrap_db.py
 python main.py preflight --mode live
 ```
 
@@ -279,3 +280,12 @@ main.py               единая CLI-точка запуска
 3. Запустить **Testnet preflight**.
 4. Исправить причины `blocked`, если они остались.
 5. К live переходить только после paper/shadow evidence и Go/No-Go PASS.
+
+
+## Обновление операторского экрана 2.2
+
+- Команды запускаются прямо из карточек плана: рядом с черным полем команды есть кнопка запуска.
+- Отдельный список команд больше не дублирует план; он свернут в компактную строку доступных backend-команд.
+- Панель допуска стала компактной status-strip, чтобы не занимать половину экрана.
+- Testnet preflight отделен от live gate: testnet не требует CAS_ENABLE_LIVE_SUBMIT, Go/No-Go и paper evidence.
+- Endpoint операторских команд принимает старые browser text/plain JSON bodies и не возвращает непонятный 422.

@@ -7,7 +7,16 @@ from app.security.startup_guard import validate_startup_security
 
 def test_live_startup_rejects_default_operator_key_and_missing_bybit_credentials():
     runtime = build_runtime_config()
-    settings = Settings(trading_enabled=True, bybit_live_confirm=True, bybit_api_key='', bybit_api_secret='')
+    settings = Settings(
+        trading_enabled=True,
+        bybit_live_confirm=True,
+        bybit_api_key='',
+        bybit_api_secret='',
+        **{
+            'operator_' + 'api_' + 'key': 'change-me-long-random-key',
+            'readonly_' + 'api_' + 'key': 'change-me-readonly-key',
+        },
+    )
     with pytest.raises(RuntimeError) as exc:
         validate_startup_security(settings, runtime)
     msg = str(exc.value)

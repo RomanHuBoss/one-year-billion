@@ -38,11 +38,11 @@ def run_python(args: list[str]) -> int:
 def cmd_serve(args: argparse.Namespace) -> int:
     load_dotenv()
     if args.mode == 'testnet':
-        os.environ.setdefault('BYBIT_TESTNET', 'true')
-        os.environ.setdefault('APP_ENV', 'local')
+        os.environ['BYBIT_TESTNET'] = 'true'
+        os.environ['APP_ENV'] = 'local'
     elif args.mode == 'live':
-        os.environ.setdefault('BYBIT_TESTNET', 'false')
-        os.environ.setdefault('APP_ENV', 'prod')
+        os.environ['BYBIT_TESTNET'] = 'false'
+        os.environ['APP_ENV'] = 'prod'
     import uvicorn
 
     uvicorn.run('app.main:app', host=args.host, port=args.port, reload=args.reload)
@@ -61,10 +61,10 @@ def cmd_validate(_: argparse.Namespace) -> int:
 def cmd_preflight(args: argparse.Namespace) -> int:
     load_dotenv()
     if args.mode == 'testnet':
-        os.environ.setdefault('BYBIT_TESTNET', 'true')
+        os.environ['BYBIT_TESTNET'] = 'true'
     elif args.mode == 'live':
-        os.environ.setdefault('BYBIT_TESTNET', 'false')
-        os.environ.setdefault('APP_ENV', 'prod')
+        os.environ['BYBIT_TESTNET'] = 'false'
+        os.environ['APP_ENV'] = 'prod'
     os.execv(sys.executable, [sys.executable, str(ROOT / 'scripts' / 'live_preflight.py'), '--mode', args.mode])
     return 127
 

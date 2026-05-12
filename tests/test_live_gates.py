@@ -156,3 +156,23 @@ def test_live_preflight_blocks_when_runtime_specs_are_incomplete():
     assert result.status == 'blocked'
     assert result.checks['runtime_instrument_specs_verified'] is False
     assert any('runtime_specs_missing_or_nonpositive:qty_step' in reason for reason in result.reasons)
+
+
+def test_testnet_preflight_does_not_require_live_submit_or_go_no_go():
+    runtime = build_runtime_config()
+    settings = Settings(
+        bybit_testnet=True,
+        trading_enabled=False,
+        bybit_live_confirm=False,
+        enable_live_submit=False,
+        bybit_api_key='',
+        bybit_api_secret='',
+        require_go_nogo_for_live=True,
+        require_live_preflight=True,
+    )
+    result = run_live_preflight(settings, runtime, db_available=True, repository=FakeRepo(), mode='testnet')
+    assert result.status == 'blocked'
+    assert 'testnet_bybit_credentials_missing' in result.reasons
+    assert 'cas_enable_live_submit_false' not in result.reasons
+    assert 'go_no_go_pass_and_approver_required' not in result.reasons
+    assert result.data['go_no_go_required_for_testnet'] is False

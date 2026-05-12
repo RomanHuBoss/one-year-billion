@@ -23,10 +23,10 @@ def main() -> int:
     parser.add_argument('--mode', choices=['testnet', 'live'], default=None)
     args = parser.parse_args()
     if args.mode == 'testnet':
-        os.environ.setdefault('BYBIT_TESTNET', 'true')
+        os.environ['BYBIT_TESTNET'] = 'true'
     elif args.mode == 'live':
-        os.environ.setdefault('BYBIT_TESTNET', 'false')
-        os.environ.setdefault('APP_ENV', 'prod')
+        os.environ['BYBIT_TESTNET'] = 'false'
+        os.environ['APP_ENV'] = 'prod'
 
     settings = Settings()
     runtime = build_runtime_config()
@@ -46,7 +46,7 @@ def main() -> int:
                 db_available = True
             except Exception as exc:
                 db_error = f'{type(exc).__name__}:{exc}'
-    result = run_live_preflight(settings, runtime, db_available=db_available, repository=repo)
+    result = run_live_preflight(settings, runtime, db_available=db_available, repository=repo, mode=args.mode or ('testnet' if settings.bybit_testnet else 'live'))
     payload = {'status': result.status, 'mode': args.mode or ('testnet' if settings.bybit_testnet else 'live'), 'reasons': result.reasons, 'checks': result.checks, 'data': result.data, 'db_error': db_error}
     print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
     if db is not None:

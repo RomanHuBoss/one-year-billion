@@ -209,7 +209,7 @@ def _readiness_cards(request: Request, runtime_result) -> list[dict[str, str]]:
     ]
 
 
-def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
+def _operator_steps(request: Request, runtime_result) -> list[dict[str, Any]]:
     settings = request.app.state.settings
     checks = getattr(runtime_result, 'checks', {}) or {}
     db_available = bool(getattr(request.app.state, 'db_available', False))
@@ -221,6 +221,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python main.py validate',
             'explain': 'Должны пройти pytest, architecture checks, migration checks и secret scan.',
             'pass_when': 'Команда завершилась без ошибок.',
+            'command_id': 'validate',
         },
         {
             'id': 'testnet_preflight',
@@ -229,6 +230,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python main.py preflight --mode testnet',
             'explain': 'Проверяет настройки, Bybit testnet, runtime specs и безопасные блокировки без реальных денег.',
             'pass_when': 'status=ok. Если blocked - исправить reasons.',
+            'command_id': 'preflight_testnet',
         },
         {
             'id': 'postgresql',
@@ -237,6 +239,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python scripts/bootstrap_db.py',
             'explain': 'БД хранит hard constraints, idempotency, risk decisions, fills, incidents и evidence.',
             'pass_when': 'database_available=true в Runtime-проверке.',
+            'command_id': 'bootstrap_db',
         },
         {
             'id': 'paper_shadow',
@@ -245,6 +248,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS ...',
             'explain': 'Нужно накопить evidence без unresolved incidents и с reconciliation PASS.',
             'pass_when': 'Evidence записан в PostgreSQL и проходит live preflight.',
+            'action_hint': 'paper_evidence_manual',
         },
         {
             'id': 'go_no_go',
@@ -253,6 +257,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by <owner>',
             'explain': 'Финальное решение владельца продукта после CI, security, paper/shadow и reconciliation evidence.',
             'pass_when': 'go_no_go_approved=true.',
+            'action_hint': 'go_no_go_manual',
         },
         {
             'id': 'live_preflight',
@@ -261,6 +266,7 @@ def _operator_steps(request: Request, runtime_result) -> list[dict[str, str]]:
             'command': 'python main.py preflight --mode live',
             'explain': 'До PASS live-submit должен оставаться закрытым. blocked - безопасное состояние.',
             'pass_when': 'status=ok, все checks=true, unresolved CRITICAL/HIGH=0.',
+            'command_id': 'preflight_live',
         },
     ]
 
@@ -314,7 +320,7 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
     data = {
         'source_of_truth': 'backend_status_effective',
         'app': settings.app_name,
-        'version': 'operator-module-v3-command-center',
+        'version': 'operator-module-v4-compact-command-plan',
         'operator_mode': 'live_requested' if settings.live_requested else 'local_or_testnet_safe',
         'hero': _top_banner(request, runtime_result),
         'cards': _readiness_cards(request, runtime_result),

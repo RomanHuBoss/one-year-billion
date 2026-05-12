@@ -154,3 +154,12 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 - `timeout` — команда не завершилась за допустимое время.
 
 Если PostgreSQL уже запущен, но preflight пишет, что таблица `incidents` или `go_no_go_evidence` отсутствует, сначала выполните из интерфейса **PostgreSQL: применить migrations**. Это нормальный первый шаг, а не повод включать live вручную.
+
+
+## Операторский экран 2.2
+
+1. Откройте `http://127.0.0.1:8000/`.
+2. В блоке **Операционный центр: план и запуск** укажите `OPERATOR_API_KEY` и причину.
+3. Запускайте `validate`, `testnet preflight`, `PostgreSQL migrations` и `live preflight` кнопками прямо на карточках плана.
+4. `testnet preflight` не требует live-submit и Go/No-Go. Если он blocked, исправляйте причины testnet/DB/runtime.
+5. `live preflight` до full PASS обязан оставаться blocked. Это нормальное fail-closed состояние.

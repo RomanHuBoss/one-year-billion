@@ -82,7 +82,7 @@ python main.py validate
 Ожидаемый результат локальной проверки:
 
 ```text
-87 passed
+98 passed
 OK: strategies have no direct execution/Bybit imports
 OK: architecture invariants present
 OK: migration static invariants present
@@ -143,11 +143,11 @@ OK: no obvious secrets
 
 ```text
 python -m pytest -q
-87 passed
+98 passed
 
 python main.py validate
 compileall: PASS
-pytest: 87 passed
+pytest: 98 passed
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -315,3 +315,14 @@ node --check frontend/js/app.js
 python main.py validate
 # 97 passed
 ```
+
+
+## Дополнительные исправления редакции 2.2
+
+- Операторский экран уплотнен: панель допуска стала компактной, план и запуск команд объединены в один Операционный центр.
+- На карточках плана добавлены кнопки запуска рядом с черными полями команд, где это безопасно и уместно.
+- Убран визуальный дубль отдельного списка команд: backend allowlist остается, но UI запускает команды из плана.
+- Исправлен regression для browser text/plain JSON body на `/api/operator/commands/{id}/run`.
+- Исправлен тест startup guard, чтобы он не зависел от локального `OPERATOR_API_KEY` оператора.
+- Testnet preflight отделен от live gate: больше не требует live-submit, Go/No-Go и 14+ дней paper evidence.
+- Локальная проверка: `98 passed`, architecture checks, migration checks and secret scan PASS.
