@@ -521,3 +521,10 @@ scripts/secret_scan.py: PASS
 ```
 
 Итог: `python main.py validate` снова проходит в защищенном testnet-окружении с включенной read-auth моделью. Live-флаги остаются выключенными.
+
+
+## Редакция 8.7 — dashboard symbols fallback
+
+- Исправлен случай, когда PostgreSQL подключен, но `latest_symbol_status` еще пуст после свежих миграций: operator dashboard теперь показывает Phase 0 symbols через backend fail-closed fallback, а не пустой список.
+- Добавлен regression-тест для защищенного dashboard с пустой DB status-view.
+- Цель исправления: `python main.py validate` должен проходить в testnet-окружении с пустой, но доступной БД.

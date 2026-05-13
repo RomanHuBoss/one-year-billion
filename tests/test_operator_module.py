@@ -26,6 +26,28 @@ def test_operator_dashboard_returns_human_readable_operator_model():
     assert all('status_label' in row and 'operator_hint' in row for row in data['symbols'])
 
 
+
+
+def test_operator_dashboard_falls_back_to_phase_symbols_when_db_status_view_empty():
+    class EmptyStatusRepository:
+        def latest_statuses(self):
+            return []
+
+    previous_repo = getattr(app.state, 'repository', None)
+    try:
+        app.state.repository = EmptyStatusRepository()
+        client = TestClient(app)
+        response = client.get('/api/operator/dashboard', headers=_read_headers())
+        assert response.status_code == 200
+        data = response.json()['data']
+        symbols = data['symbols']
+        assert symbols
+        assert {row['symbol'] for row in symbols} == {'BTCUSDT', 'ETHUSDT', 'SOLUSDT'}
+        assert all('status_effective' in row for row in symbols)
+    finally:
+        app.state.repository = previous_repo
+
+
 def test_operator_frontend_is_not_raw_json_dashboard():
     html = open('frontend/index.html', encoding='utf-8').read()
     css = open('frontend/css/styles.css', encoding='utf-8').read()

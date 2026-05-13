@@ -130,9 +130,19 @@ def _runtime_result(request: Request):
 
 def _symbol_rows(request: Request) -> list[dict[str, Any]]:
     repo = getattr(request.app.state, 'repository', None)
+    rows: list[dict[str, Any]] = []
     if repo is not None:
-        rows = repo.latest_statuses()
-    else:
+        try:
+            rows = repo.latest_statuses()
+        except Exception:
+            # Панель оператора не должна падать из-за отсутствующей/неполной
+            # runtime-view. Безопаснее показать синтетический fail-closed статус
+            # по phase-universe, чем оставить оператора без списка символов.
+            rows = []
+    if not rows:
+        # Свежая БД после миграций может быть пустой до первого runtime/paper цикла.
+        # Dashboard всё равно обязан показывать BTC/ETH/SOL Phase 0 и reasons,
+        # чтобы frontend не додумывал состав universe или status_effective.
         rows = request.app.state.demo_state.overview()
     enriched: list[dict[str, Any]] = []
     for row in rows:

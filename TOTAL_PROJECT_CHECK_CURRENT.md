@@ -77,3 +77,10 @@ python main.py preflight --mode live
 - Regression-тесты operator/paper/runtime endpoints используют `READONLY_API_KEY`, поэтому `python main.py validate` проходит как в `APP_ENV=local`, так и в `APP_ENV=testnet`.
 - Operator dashboard в testnet-safe окружении показывает `Безопасный testnet/local режим`.
 - Проверка: `python main.py validate` при `APP_ENV=testnet` — `116 passed, 1 warning`; architecture/migrations/secret scan — PASS.
+
+
+## Редакция 8.7 — dashboard symbols fallback
+
+- Исправлен случай, когда PostgreSQL подключен, но `latest_symbol_status` еще пуст после свежих миграций: operator dashboard теперь показывает Phase 0 symbols через backend fail-closed fallback, а не пустой список.
+- Добавлен regression-тест для защищенного dashboard с пустой DB status-view.
+- Цель исправления: `python main.py validate` должен проходить в testnet-окружении с пустой, но доступной БД.
