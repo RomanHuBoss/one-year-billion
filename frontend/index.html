@@ -16,6 +16,10 @@
       </div>
     </div>
     <div class="header-actions">
+      <label class="top-key-label" title="Ключ backend: OPERATOR_API_KEY или READONLY_API_KEY из .env. Не вводите сюда ключ Bybit.">
+        <span>API-доступ</span>
+        <input id="topApiKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY / READONLY_API_KEY" />
+      </label>
       <span id="topStatus" class="status-pill neutral" data-help="hero">загрузка</span>
       <button id="globalHelpBtn" class="btn help">Справка</button>
       <button id="refreshBtn" class="btn primary">Обновить</button>

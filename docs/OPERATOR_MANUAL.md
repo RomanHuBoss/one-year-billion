@@ -206,3 +206,9 @@ python main.py preflight --mode testnet
 7. Повторить `Testnet preflight` из интерфейса.
 
 Актуальная версия preflight показывает не общий `RuntimeError`, а конкретные причины: `bybit_private_api_auth_failed`, `bybit_wallet_balance_failed`, `bybit_positions_failed`, `bybit_api_key_trade_permission_not_verified`, а также безопасную диагностику `ret_code`, `ret_msg`, `path` без вывода секретов.
+
+## Ошибка `API 401: invalid_api_key`
+
+Если ошибка показана в браузере при открытии dashboard, обновлении команд или запуске safe-action, backend не принял ключ доступа оператора. Это не Bybit API key. Введите в верхней панели **API-доступ** значение `OPERATOR_API_KEY` или `READONLY_API_KEY` из `.env` без пробелов, кавычек и переносов строк. Для запуска команд и безопасных действий подходит только `OPERATOR_API_KEY`.
+
+Если похожая ошибка находится внутри результата testnet preflight как `bybit_private_api_auth_failed`, значит публичный Bybit может быть доступен, но private API не подтвердил ключи. Тогда проверьте testnet/live кабинет, secret, IP whitelist и permissions, затем перезапустите backend.

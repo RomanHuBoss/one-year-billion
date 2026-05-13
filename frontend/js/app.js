@@ -14,6 +14,41 @@ function pretty(data) {
   return JSON.stringify(data, null, 2);
 }
 
+
+function currentApiKey() {
+  const values = [
+    $('topApiKey')?.value,
+    $('commandOperatorKey')?.value,
+    $('operatorKey')?.value,
+  ];
+  return (values.find(value => String(value || '').trim()) || '').trim();
+}
+
+function readAuthOptions(options = {}) {
+  const key = currentApiKey();
+  if (!key) return options;
+  return {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      'x-api-key': key,
+    },
+  };
+}
+
+function syncApiKeyInputs(value) {
+  ['topApiKey', 'commandOperatorKey', 'operatorKey'].forEach(id => {
+    const el = $(id);
+    if (el && el.value !== value) el.value = value;
+  });
+}
+
+function showAuthHint(message) {
+  const text = message || 'Введите OPERATOR_API_KEY или READONLY_API_KEY из .env. Это ключ доступа к backend, не ключ Bybit.';
+  $('operatorJobResult').className = 'job-output error';
+  $('operatorJobResult').innerHTML = `<strong>Доступ к backend отклонен.</strong><p>${escapeHtml(text)}</p><p>Введите ключ в поле «API-доступ» в верхней панели и нажмите «Обновить». Для запуска команд и безопасных действий нужен OPERATOR_API_KEY.</p>`;
+}
+
 function badge(text, level = 'info') {
   return `<span class="badge ${escapeHtml(level)}">${escapeHtml(text)}</span>`;
 }
@@ -186,7 +221,7 @@ function renderOperatorCommands(commands) {
 }
 
 async function loadCommands() {
-  const payload = await api('/api/operator/commands');
+  const payload = await api('/api/operator/commands', readAuthOptions());
   renderOperatorCommands(payload.data.commands || []);
   if (payload.data.jobs?.length) {
     renderJob(payload.data.jobs[0]);
@@ -212,7 +247,7 @@ function renderJob(job) {
 
 async function pollJob(jobId) {
   for (let i = 0; i < 60; i += 1) {
-    const payload = await api(`/api/operator/jobs/${encodeURIComponent(jobId)}`);
+    const payload = await api(`/api/operator/jobs/${encodeURIComponent(jobId)}`, readAuthOptions());
     renderJob(payload.data.job);
     if (!['queued', 'running'].includes(payload.data.job.status)) return;
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -220,9 +255,10 @@ async function pollJob(jobId) {
 }
 
 async function runOperatorCommand(commandId) {
-  const key = $('commandOperatorKey').value.trim();
+  const key = ($('commandOperatorKey').value || $('topApiKey')?.value || '').trim();
   const reason = $('commandReason').value.trim();
   const resultBox = $('operatorJobResult');
+  if (key) syncApiKeyInputs(key);
   if (!key || !reason) {
     resultBox.className = 'job-output error';
     resultBox.textContent = 'Нужны OPERATOR_API_KEY и причина запуска. Backend не примет команду без audit-причины.';
@@ -248,7 +284,11 @@ async function runOperatorCommand(commandId) {
     await loadAll();
   } catch (err) {
     resultBox.className = 'job-output error';
-    resultBox.textContent = err.message;
+    if (String(err.message).includes('invalid_api_key') || String(err.message).includes('operator_key_required')) {
+      showAuthHint(err.message);
+    } else {
+      resultBox.textContent = err.message;
+    }
   }
 }
 
@@ -273,7 +313,7 @@ function renderPaperSummary(data) {
 }
 
 async function loadAll() {
-  const payload = await api('/api/operator/dashboard');
+  const payload = await api('/api/operator/dashboard', readAuthOptions());
   lastDashboard = payload;
   const data = payload.data;
   selectedSymbol = null;
@@ -292,7 +332,7 @@ async function runPaper() {
   $('paperRunBtn').disabled = true;
   $('paperRunBtn').textContent = 'Запускаю...';
   try {
-    const result = await api('/api/paper/run-once', { method: 'POST', body: '{}' });
+    const result = await api('/api/paper/run-once', readAuthOptions({ method: 'POST', body: '{}' }));
     renderPaperSummary(result.data);
     renderDiagnostics({ dashboard: lastDashboard, paper: result });
   } catch (err) {
@@ -304,9 +344,10 @@ async function runPaper() {
 }
 
 async function submitSafeAction(action) {
-  const key = $('operatorKey').value.trim();
+  const key = ($('operatorKey').value || $('topApiKey')?.value || '').trim();
   const reason = $('actionReason').value.trim();
   const resultBox = $('actionResult');
+  if (key) syncApiKeyInputs(key);
   resultBox.className = 'callout';
   if (!key || !reason) {
     resultBox.className = 'callout error';
@@ -326,7 +367,13 @@ async function submitSafeAction(action) {
     await loadAll();
   } catch (err) {
     resultBox.className = 'callout error';
-    resultBox.textContent = err.message;
+    if (String(err.message).includes('invalid_api_key') || String(err.message).includes('operator_key_required')) {
+      resultBox.textContent = `${err.message}
+Введите OPERATOR_API_KEY в верхней панели или в блоке безопасных действий.`;
+      showAuthHint(err.message);
+    } else {
+      resultBox.textContent = err.message;
+    }
   }
 }
 
@@ -353,7 +400,21 @@ installContextHelp({
 });
 
 function showFatal(err) {
-  document.body.insertAdjacentHTML('beforeend', `<div class="callout error" style="margin:20px">${escapeHtml(err.message)}</div>`);
+  const msg = String(err.message || err);
+  if (msg.includes('invalid_api_key') || msg.includes('operator_key_required')) {
+    showAuthHint(msg);
+    document.body.insertAdjacentHTML('afterbegin', `<div class="callout error auth-callout">${escapeHtml(msg)}<br>Введите ключ в поле «API-доступ» и нажмите «Обновить».</div>`);
+    return;
+  }
+  document.body.insertAdjacentHTML('beforeend', `<div class="callout error" style="margin:20px">${escapeHtml(msg)}</div>`);
 }
+
+$('topApiKey')?.addEventListener('change', event => syncApiKeyInputs(event.target.value.trim()));
+$('topApiKey')?.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    syncApiKeyInputs(event.target.value.trim());
+    loadAll().then(loadCommands).catch(showFatal);
+  }
+});
 
 loadAll().then(loadCommands).catch(showFatal);

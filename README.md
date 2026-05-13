@@ -303,3 +303,9 @@ main.py               единая CLI-точка запуска
 - аккаунт/ключ не имеет доступа к Linear USDT positions/wallet endpoints.
 
 В актуальной версии preflight пишет конкретные причины в `reasons` и безопасные детали в `data.bybit_private_errors`: `ret_code`, `ret_msg`, `path`, `check`. Секреты и ключи туда не выводятся. После правки `.env` перезапустите backend и повторите `python main.py preflight --mode testnet`.
+
+### Ошибка `API 401: invalid_api_key`
+
+В операторском интерфейсе эта ошибка относится к ключу доступа к backend (`OPERATOR_API_KEY` или `READONLY_API_KEY`), а не к ключу Bybit. Введите ключ из `.env` в поле **API-доступ** в верхней панели и нажмите **Обновить**. Для чтения dashboard допустим `READONLY_API_KEY`, для запуска команд и безопасных действий нужен `OPERATOR_API_KEY`.
+
+Если ошибка появляется в `python main.py preflight --mode testnet` в блоке `bybit_private_api_auth_failed`, это уже private-доступ Bybit: проверьте `BYBIT_TESTNET`, пару `BYBIT_API_KEY`/`BYBIT_API_SECRET`, IP whitelist и права Linear/Contract/Derivatives.

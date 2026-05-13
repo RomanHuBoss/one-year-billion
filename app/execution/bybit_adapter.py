@@ -89,6 +89,43 @@ class BybitAdapter:
             'Content-Type': 'application/json',
         }
 
+    def _raise_http_status_error(self, response: httpx.Response, path: str | None = None) -> None:
+        """Нормализует HTTP 401/403/5xx без утечки заголовков и секретов.
+
+        У Bybit и нашего operator API 401 часто приходит как JSON `invalid_api_key`.
+        Оператор должен видеть явную причину блокировки, а не общий
+        `HTTPStatusError`, но тело ответа нельзя прокидывать целиком: там могут
+        быть диагностические детали, не предназначенные для UI.
+        """
+
+        if response.status_code == 429:
+            self.degraded_reason = 'http_429'
+            raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=response.status_code)
+        if response.is_success:
+            return
+
+        ret_code = None
+        ret_msg = response.reason_phrase or 'http_status_error'
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                ret_code = payload.get('retCode') or payload.get('ret_code') or payload.get('code')
+                detail = payload.get('retMsg') or payload.get('ret_msg') or payload.get('message') or payload.get('detail')
+                if detail:
+                    ret_msg = str(detail)
+        except ValueError:
+            pass
+
+        normalized_msg = ret_msg.lower().replace(' ', '_')
+        if response.status_code in {401, 403}:
+            code = 'invalid_api_key' if 'invalid_api_key' in normalized_msg or 'invalid_api' in normalized_msg else 'bybit_private_auth_failed'
+        elif response.status_code >= 500:
+            code = 'exchange_degraded'
+            self.degraded_reason = f'http_{response.status_code}'
+        else:
+            code = 'http_status_error'
+        raise BybitAPIError(code, ret_msg, ret_code=ret_code, ret_msg=ret_msg, path=path, http_status=response.status_code)
+
     def _raise_if_bybit_degraded(self, payload: dict[str, Any], path: str | None = None) -> None:
         ret_code = payload.get('retCode')
         if ret_code in {429, 10006}:
@@ -107,13 +144,7 @@ class BybitAdapter:
         self._guard_rate_limit()
         with httpx.Client(timeout=10) as client:
             r = client.get(f'{self.cfg.base_url}{path}', params=params or {})
-            if r.status_code == 429:
-                self.degraded_reason = 'http_429'
-                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
-            try:
-                r.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
+            self._raise_http_status_error(r, path=path)
             data = r.json()
             self._raise_if_bybit_degraded(data, path=path)
             self._raise_if_bybit_rejected(data, path=path)
@@ -128,13 +159,7 @@ class BybitAdapter:
         headers = self._headers(query)
         with httpx.Client(timeout=10) as client:
             r = client.get(f'{self.cfg.base_url}{path}', params=params, headers=headers)
-            if r.status_code == 429:
-                self.degraded_reason = 'http_429'
-                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
-            try:
-                r.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
+            self._raise_http_status_error(r, path=path)
             data = r.json()
             self._raise_if_bybit_degraded(data, path=path)
             self._raise_if_bybit_rejected(data, path=path)
@@ -147,13 +172,7 @@ class BybitAdapter:
         body = json.dumps(payload, separators=(',', ':'), ensure_ascii=False)
         with httpx.Client(timeout=10) as client:
             r = client.post(f'{self.cfg.base_url}{path}', content=body, headers=self._headers(body))
-            if r.status_code == 429:
-                self.degraded_reason = 'http_429'
-                raise BybitAPIError('exchange_degraded', 'http_429', path=path, http_status=r.status_code)
-            try:
-                r.raise_for_status()
-            except httpx.HTTPStatusError as exc:
-                raise BybitAPIError('http_status_error', str(exc), path=path, http_status=r.status_code) from exc
+            self._raise_http_status_error(r, path=path)
             data = r.json()
             self._raise_if_bybit_degraded(data, path=path)
             self._raise_if_bybit_rejected(data, path=path)

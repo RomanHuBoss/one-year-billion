@@ -179,3 +179,10 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 7. Повторить Testnet preflight.
 
 До исчезновения этих причин testnet readiness считается BLOCKED. Это правильное fail-closed состояние.
+
+## Разбор `API 401: invalid_api_key`
+
+1. Если сообщение пришло из браузера как `Ошибка API 401: invalid_api_key`, проверять нужно backend-ключ: `OPERATOR_API_KEY`/`READONLY_API_KEY`. Введите его в поле **API-доступ**. Не вводите туда ключ Bybit.
+2. Если отказ появляется при write-action или запуске команды, используйте именно `OPERATOR_API_KEY`; `READONLY_API_KEY` должен давать только чтение.
+3. Если отказ находится внутри `bybit_private_api_auth_failed`, проверяйте Bybit testnet/live endpoint, ключ, secret, IP whitelist и Linear/Contract/Derivatives permissions.
+4. После правки `.env` перезапустите backend: `python main.py serve --mode testnet`.
