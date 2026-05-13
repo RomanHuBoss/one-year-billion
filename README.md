@@ -22,7 +22,7 @@
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
-Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `108 passed`.
+Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `112 passed`.
 
 ## Быстрый запуск из командной строки
 

@@ -368,3 +368,8 @@ python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybi
 
 Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL и runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до внешних gates.
 
+
+
+## Редакция 8.2 — numeric fail-closed hardening
+
+Дополнительно проверены числовые входы `SignalCandidate`, `RiskConfig` и `CostModel`. `NaN`, `inf`, отрицательные комиссии/буферы и невалидные risk-config значения теперь не могут пройти через сравнения Python и приводят к rejected `RiskDecision` с причинами `invalid_signal_numeric_value`, `invalid_risk_config` или `invalid_cost_model`. Добавлены regression-тесты hard-invariants.

@@ -157,3 +157,34 @@ def test_zero_account_equity_rejected_fail_closed():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
     assert not rd.approved
     assert 'invalid_account_equity' in rd.reasons
+
+
+def test_nan_signal_edge_rejected_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    signal.expected_gross_edge_bps = float('nan')
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_signal_numeric_value' in rd.reasons
+
+
+def test_infinite_entry_price_rejected_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    signal.entry_price = float('inf')
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_signal_numeric_value' in rd.reasons
+
+
+def test_negative_cost_model_rejected_fail_closed():
+    from app.risk_engine.cost_model import CostModel
+    signal, ml, account, market, specs = base_objects()
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0), CostModel(maker_fee_bps=-1))
+    assert not rd.approved
+    assert 'invalid_cost_model' in rd.reasons
+
+
+def test_nonfinite_risk_config_rejected_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(risk_pct_default=float('nan'), min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_risk_config' in rd.reasons

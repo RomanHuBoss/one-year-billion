@@ -48,6 +48,42 @@ def approve_signal(
         if condition:
             reasons.append(reason)
 
+    # Numeric sanity checks are explicit because Python float NaN/inf can otherwise
+    # slip through comparisons such as `nan <= 0` and make a dangerous candidate
+    # look acceptable. Любое non-finite значение в candidate/config/cost model
+    # переводит risk approval в fail-closed rejected.
+    signal_numbers = (signal.entry_price, signal.expected_gross_edge_bps)
+    if signal.stop_price is not None:
+        signal_numbers = (*signal_numbers, signal.stop_price)
+    fail_if(any(not math.isfinite(float(x)) for x in signal_numbers), 'invalid_signal_numeric_value')
+
+    cfg_numbers = (
+        cfg.risk_pct_default, cfg.max_effective_leverage, cfg.reserve_cash_pct,
+        cfg.max_daily_loss_pct, cfg.max_weekly_loss_pct, cfg.min_liq_distance_pct,
+        cfg.max_spread_bps, cfg.min_depth_usdt, cfg.min_net_edge_bps,
+    )
+    fail_if(
+        any(not math.isfinite(float(x)) for x in cfg_numbers)
+        or cfg.risk_pct_default <= 0
+        or cfg.max_effective_leverage <= 0
+        or cfg.reserve_cash_pct < 0
+        or cfg.max_daily_loss_pct < 0
+        or cfg.max_weekly_loss_pct < 0
+        or cfg.min_liq_distance_pct < 0
+        or cfg.max_spread_bps < 0
+        or cfg.min_depth_usdt < 0
+        or cfg.min_net_edge_bps < 0,
+        'invalid_risk_config',
+    )
+    cost_numbers = (
+        cost_model.maker_fee_bps, cost_model.taker_fee_bps, cost_model.slippage_buffer_bps,
+        cost_model.funding_buffer_bps, cost_model.safety_buffer_bps,
+    )
+    fail_if(
+        any(not math.isfinite(float(x)) for x in cost_numbers) or any(float(x) < 0 for x in cost_numbers),
+        'invalid_cost_model',
+    )
+
     fail_if(not account.fresh, 'stale_account_state')
     fail_if(not market.fresh, 'stale_orderbook')
     fail_if(not market.funding_fresh, 'stale_funding')
