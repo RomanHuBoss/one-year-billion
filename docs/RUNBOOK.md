@@ -179,19 +179,3 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 7. Повторить Testnet preflight.
 
 До исчезновения этих причин testnet readiness считается BLOCKED. Это правильное fail-closed состояние.
-
-## Testnet-dashboard с READONLY_API_KEY
-
-1. Убедиться, что в `.env` заданы разные значения `READONLY_API_KEY` и `OPERATOR_API_KEY`.
-2. Запустить dashboard:
-
-```powershell
-python main.py serve --mode testnet --host 127.0.0.1 --port 8001
-```
-
-3. Открыть `http://127.0.0.1:8001/`.
-4. В блоке **Доступ к панели** вставить `READONLY_API_KEY` и нажать **Применить ключ чтения**.
-5. Убедиться, что БД отображается как подключенная, затем выполнить `Testnet preflight` и `Paper один раз`.
-6. Для write-команд использовать только `OPERATOR_API_KEY` и обязательно указывать причину.
-
-Если появляется `401 invalid_api_key`, значит frontend не получил ключ чтения или ключ отличается от значения в `.env`. Заменить ключи после случайной публикации в чат/лог.

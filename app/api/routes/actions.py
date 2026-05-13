@@ -55,10 +55,16 @@ async def action(
     if repo is not None:
         # Небезопасную команду сохраняем как audit-marker, а не как исполнимое действие.
         # Это предотвращает 500 на DB CHECK и сохраняет исходную попытку в target.
+        # Важно: rejected ACTIVATE_CONFIG/PROPOSE_CONFIG с risk_increase=true нельзя
+        # писать как ACTIVATE_CONFIG, потому что DB-инвариант manual_config_change_reduce_only
+        # обязан технически запретить любые risk-up config records.
         audit_action = req.action if req.action in ALLOWED_ACTIONS else AUDIT_REJECTED_ACTION
+        if not accepted and req.action in CONFIG_ACTIONS:
+            audit_action = AUDIT_REJECTED_ACTION
         audit_target = dict(req.target)
         if audit_action == AUDIT_REJECTED_ACTION:
             audit_target['attempted_action'] = req.action
+            audit_target['rejection_reasons'] = reasons
         repo.log_manual_action(actor=actor, action=audit_action, reason=req.reason or 'reason_missing', target=audit_target, status='ACCEPTED' if accepted else 'REJECTED', trace_id=trace_id)
     result = ManualActionResult(accepted=accepted, action=req.action, reduce_only=True, reasons=reasons, trace_id=trace_id)
     envelope_payload = {'trace_id': trace_id, 'status': 'ok' if accepted else 'rejected', 'reasons': reasons, 'data': result.model_dump()}

@@ -70,3 +70,10 @@ python main.py preflight --mode live
 - Testnet/paper готовность: технически подготовлено, но testnet preflight требует внешнюю БД и testnet credentials.
 - Technical-live-ready: кодовая база готова как fail-closed/live-gated система.
 - Live: **не разрешен** до прохождения внешних gate. Это корректное поведение; unsafe live-submit технически заблокирован.
+
+## Дополнение 8.6 — исправление validate в APP_ENV=testnet
+
+- Устранен DB CHECK conflict при audit rejected config activation: unsafe risk-up попытка логируется как `REJECTED_UNSAFE_ACTION`, а не как исполнимый `ACTIVATE_CONFIG`.
+- Regression-тесты operator/paper/runtime endpoints используют `READONLY_API_KEY`, поэтому `python main.py validate` проходит как в `APP_ENV=local`, так и в `APP_ENV=testnet`.
+- Operator dashboard в testnet-safe окружении показывает `Безопасный testnet/local режим`.
+- Проверка: `python main.py validate` при `APP_ENV=testnet` — `116 passed, 1 warning`; architecture/migrations/secret scan — PASS.

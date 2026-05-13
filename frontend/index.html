@@ -23,25 +23,6 @@
   </header>
 
   <main class="shell compact">
-
-    <section class="panel auth-panel" data-help="auth">
-      <div class="panel-heading horizontal">
-        <div>
-          <h2>Доступ к панели</h2>
-          <p>В APP_ENV=testnet/prod чтение dashboard требует READONLY_API_KEY. Ключ хранится только в sessionStorage браузера и не является Bybit-ключом.</p>
-        </div>
-      </div>
-      <div class="auth-form compact-form">
-        <label>
-          Ключ чтения
-          <input id="readonlyApiKey" type="password" autocomplete="off" placeholder="READONLY_API_KEY" />
-        </label>
-        <button id="saveReadonlyKeyBtn" class="btn secondary" type="button">Применить ключ чтения</button>
-        <button id="clearReadonlyKeyBtn" class="btn ghost" type="button">Очистить</button>
-      </div>
-      <div id="authStatus" class="auth-status info">Для защищенного dashboard укажите READONLY_API_KEY.</div>
-      <div id="startupError" class="callout hidden"></div>
-    </section>
     <section id="hero" class="hero-card loading" data-help="hero">
       <div>
         <p class="eyebrow">Главный статус</p>

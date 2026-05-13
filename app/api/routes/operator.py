@@ -118,7 +118,7 @@ def _runtime_result(request: Request):
         'frontend_source_backend': True,
     }
     result.data = {
-        'mode': 'local_smoke',
+        'mode': f'{settings.app_env}_safe_smoke',
         'phase': runtime.phase,
         'config_hash': runtime.config_hash,
         'exchange_scope': 'bybit_v5_linear_usdt_only',
@@ -292,10 +292,11 @@ def _top_banner(request: Request, runtime_result) -> dict[str, str]:
             'message': 'Система видит live-настройки, но один или несколько gate не пройдены. Это правильное fail-closed поведение.',
             'next_step': 'Откройте блок "Что мешает запуску" и исправляйте причины сверху вниз.',
         }
+    safe_mode_label = 'testnet/local' if settings.app_env in {'testnet', 'prod'} else 'локальный'
     return {
         'level': 'ok',
-        'title': 'Безопасный локальный режим',
-        'message': 'Реальные ордера не отправляются. Можно тестировать интерфейс, paper-конвейер и локальные проверки.',
+        'title': f'Безопасный {safe_mode_label} режим',
+        'message': 'Реальные ордера не отправляются. Можно тестировать интерфейс, paper-конвейер, PostgreSQL и testnet-проверки.',
         'next_step': 'Запустите "Paper один раз", затем выполните python main.py validate и testnet preflight.',
     }
 

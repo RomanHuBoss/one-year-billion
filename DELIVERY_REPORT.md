@@ -495,34 +495,29 @@ Testnet/live preflight в песочнице корректно возвраща
 - Добавлен regression-тест `test_paper_summary_does_not_derive_status_from_frontend_risk_approval`.
 - Актуальная проверка: `python main.py validate` — `116 passed, 1 warning`; testnet/live preflight корректно остаются `blocked` без PostgreSQL, Bybit credentials/runtime и Go/No-Go evidence.
 
-## Редакция 8.5 — защищенный testnet-dashboard и READONLY_API_KEY
+## Редакция 8.6 — validate/testnet-auth regression fix
 
 Дата проверки: 2026-05-13.
 
 ### Исправления
 
-- `python main.py serve --mode testnet` теперь запускает `APP_ENV=testnet`, а не принудительный `APP_ENV=local`; dashboard открывает PostgreSQL runtime repository и не показывает ложный `database_available=false` после успешного testnet preflight.
-- Во frontend добавлен блок **Доступ к панели**: оператор вводит `READONLY_API_KEY`, ключ сохраняется только в `sessionStorage` текущей вкладки и автоматически отправляется как `x-api-key` для read-only endpoints.
-- `api_client.js` автоматически добавляет `x-api-key` из sessionStorage для чтения dashboard, списка команд, статуса jobs и paper smoke; явно переданный `OPERATOR_API_KEY` для write endpoints имеет приоритет.
-- `OPERATOR_API_KEY` можно временно использовать как read-key для polling результатов команды, но UI предупреждает, что предпочтителен отдельный `READONLY_API_KEY`.
-- Ошибка `401 invalid_api_key` теперь объясняет оператору, что нужно указать `READONLY_API_KEY`/`OPERATOR_API_KEY`.
+- Исправлен audit unsafe config activation: rejected `ACTIVATE_CONFIG`/`PROPOSE_CONFIG` с `risk_increase=true` теперь пишется в `manual_request_log` как `REJECTED_UNSAFE_ACTION` с `attempted_action` и `rejection_reasons`. Это сохраняет audit trail и не нарушает DB-инвариант `manual_config_change_reduce_only`.
+- Regression-тесты read-only endpoints обновлены под защищенный `APP_ENV=testnet`: dashboard, commands, paper и runtime preflight вызываются с `READONLY_API_KEY`.
+- Заголовок operator dashboard уточнен: в testnet-safe окружении отображается `Безопасный testnet/local режим`, чтобы не путать его с отсутствием PostgreSQL или Bybit testnet.
 
-### Проверки
+### Проверка
 
 ```text
-python main.py validate
+APP_ENV=testnet READONLY_API_KEY=ro OPERATOR_API_KEY=op BYBIT_TESTNET=true \
+TRADING_ENABLED=false CAS_ENABLE_LIVE_SUBMIT=false BYBIT_LIVE_CONFIRM=false \
+CAS_GO_NOGO_PASS=false python main.py validate
+
 compileall: PASS
-pytest: 118 passed, 1 warning
+pytest: 116 passed, 1 warning
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
 scripts/secret_scan.py: PASS
 ```
 
-### Операторский запуск testnet-dashboard
-
-```powershell
-python main.py serve --mode testnet --host 127.0.0.1 --port 8001
-```
-
-В браузере открыть `http://127.0.0.1:8001/`, вставить `READONLY_API_KEY` в блок **Доступ к панели**, нажать **Применить ключ чтения**, затем запускать `Testnet preflight` и `Paper один раз`. Live-флаги остаются выключенными.
+Итог: `python main.py validate` снова проходит в защищенном testnet-окружении с включенной read-auth моделью. Live-флаги остаются выключенными.

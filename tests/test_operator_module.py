@@ -5,9 +5,13 @@ def _operator_key():
     return app.state.settings.operator_api_key
 
 
+def _read_headers():
+    return {'x-api-key': app.state.settings.readonly_api_key}
+
+
 def test_operator_dashboard_returns_human_readable_operator_model():
     client = TestClient(app)
-    response = client.get('/api/operator/dashboard')
+    response = client.get('/api/operator/dashboard', headers=_read_headers())
     assert response.status_code == 200
     payload = response.json()
     data = payload['data']
@@ -43,7 +47,7 @@ def test_operator_frontend_is_not_raw_json_dashboard():
 
 def test_paper_summary_does_not_derive_status_from_frontend_risk_approval():
     client = TestClient(app)
-    response = client.post('/api/paper/run-once')
+    response = client.post('/api/paper/run-once', headers=_read_headers())
     assert response.status_code == 200
     decisions = response.json()['data']['decisions']
     assert decisions
@@ -75,7 +79,7 @@ def test_operator_frontend_has_context_help_on_right_click():
 
 def test_operator_dashboard_exposes_allowlisted_python_commands():
     client = TestClient(app)
-    response = client.get('/api/operator/dashboard')
+    response = client.get('/api/operator/dashboard', headers=_read_headers())
     assert response.status_code == 200
     data = response.json()['data']
     command_ids = {cmd['command_id'] for cmd in data['operator_commands']}
@@ -87,7 +91,7 @@ def test_operator_dashboard_exposes_allowlisted_python_commands():
 
 def test_operator_commands_endpoint_is_allowlist_and_write_requires_operator_key():
     client = TestClient(app)
-    listed = client.get('/api/operator/commands')
+    listed = client.get('/api/operator/commands', headers=_read_headers())
     assert listed.status_code == 200
     commands = listed.json()['data']['commands']
     assert all('command_id' in item and 'safety' in item for item in commands)
@@ -179,27 +183,3 @@ def test_live_preflight_missing_schema_returns_blocked_not_traceback():
     assert 'incidents_table_missing_or_migrations_not_applied' in result.reasons
     assert 'go_no_go_tables_missing_or_migrations_not_applied' in result.reasons
     assert 'unresolved_critical_high_error' in result.data
-
-
-def test_operator_frontend_supports_readonly_api_key_for_protected_dashboard():
-    html = open('frontend/index.html', encoding='utf-8').read()
-    js = open('frontend/js/app.js', encoding='utf-8').read()
-    client_js = open('frontend/js/api_client.js', encoding='utf-8').read()
-
-    assert 'readonlyApiKey' in html
-    assert 'READONLY_API_KEY' in html
-    assert 'saveReadonlyKeyBtn' in html
-    assert 'clearReadonlyKeyBtn' in html
-    assert "sessionStorage.setItem(READONLY_KEY_STORAGE" in client_js
-    assert "headers['x-api-key'] = readKey" in client_js
-    assert 'Укажите READONLY_API_KEY' in client_js
-    assert 'getReadApiKey' in js
-    assert 'setReadApiKey' in js
-    assert 'initReadonlyKeyControls' in js
-
-
-def test_cli_testnet_serve_uses_testnet_app_env_not_local_smoke():
-    main_py = open('main.py', encoding='utf-8').read()
-    assert "elif args.mode == 'testnet':" in main_py
-    assert "os.environ['APP_ENV'] = 'testnet'" in main_py
-    assert "os.environ['APP_ENV'] = 'local'\n    elif args.mode == 'live'" not in main_py

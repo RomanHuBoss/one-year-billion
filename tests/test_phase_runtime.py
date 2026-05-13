@@ -18,7 +18,7 @@ def test_phase0_carry_live_has_no_route():
 
 def test_runtime_preflight_exposes_config_hash_and_safe_scope():
     client = TestClient(app)
-    response = client.get('/api/runtime/preflight')
+    response = client.get('/api/runtime/preflight', headers={'x-api-key': app.state.settings.readonly_api_key})
     assert response.status_code == 200
     payload = response.json()
     assert payload['data']['exchange_scope'] == 'bybit_v5_linear_usdt_only'
