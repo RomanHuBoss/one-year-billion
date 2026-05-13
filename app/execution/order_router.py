@@ -36,8 +36,16 @@ class OrderRouter:
             raise ValueError('risk_feature_hash_mismatch')
         if not signal.stop_price or not signal.invalidator:
             raise ValueError('missing_stop_or_invalidator')
+        if not signal.feature_hash:
+            raise ValueError('missing_feature_hash')
+        if not signal.regime_id or not signal.feature_id or not signal.required_data:
+            raise ValueError('incomplete_signal_lineage')
+        if not signal.evidence and not signal.shadow_only:
+            raise ValueError('missing_strategy_evidence')
         if risk.sizing.qty <= 0 or risk.sizing.notional <= 0:
             raise ValueError('invalid_approved_sizing')
+        if risk.sizing.risk_budget <= 0 or risk.sizing.max_loss_if_stop > risk.sizing.risk_budget:
+            raise ValueError('approved_sizing_breaks_risk_budget')
         if risk.sizing.expected_net_edge_bps <= 0:
             raise ValueError('no_positive_net_edge')
         # Межзапросный lock предотвращает второй entry-path по тому же symbol.

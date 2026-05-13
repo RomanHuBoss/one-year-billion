@@ -49,4 +49,4 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 
 ## Последняя локальная проверка архива
 
-Локальная проверка последней редакции: `python main.py validate` — PASS, `112 passed`. Testnet/live preflight в песочнице корректно возвращают `blocked`, потому что нет внешней PostgreSQL, Bybit API keys и Go/No-Go evidence.
+Локальная проверка последней редакции: `python main.py validate` — PASS, `115 passed`. Testnet/live preflight в песочнице корректно возвращают `blocked`, потому что нет внешней PostgreSQL, Bybit API keys и Go/No-Go evidence.

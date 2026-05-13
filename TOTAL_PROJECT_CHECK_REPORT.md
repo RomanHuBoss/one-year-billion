@@ -373,3 +373,38 @@ python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybi
 ## Редакция 8.2 — numeric fail-closed hardening
 
 Дополнительно проверены числовые входы `SignalCandidate`, `RiskConfig` и `CostModel`. `NaN`, `inf`, отрицательные комиссии/буферы и невалидные risk-config значения теперь не могут пройти через сравнения Python и приводят к rejected `RiskDecision` с причинами `invalid_signal_numeric_value`, `invalid_risk_config` или `invalid_cost_model`. Добавлены regression-тесты hard-invariants.
+
+---
+
+## Редакция 8.3 — hardening SignalCandidate lineage и live RiskDecision payload integrity
+
+Дата проверки: 2026-05-13.
+
+### Найденные и исправленные дефекты
+
+1. `app/risk_engine/approval.py`: risk approval мог вернуть общий rejected по missing evidence, но не имел отдельного hard-reason для неполной lineage-связки candidate. Добавлена проверка `regime_id`, `feature_id`, `required_data` с reason `incomplete_signal_lineage`.
+2. `app/execution/order_router.py`: in-memory/paper route слишком доверял объекту `RiskDecision`, если `approved=True`. Добавлены повторные проверки evidence/lineage и `max_loss_if_stop <= risk_budget` перед созданием `OrderIntent`.
+3. `app/db/repository.py`: live route теперь дополнительно сверяет sizing из HTTP payload с persisted `risk_decisions.sizing_json` до insert в `orders`. DB trigger остается последней линией обороны, но подмена payload блокируется раньше.
+4. Тестовые fixtures live-submit/order-router приведены к обязательной полной модели `SignalCandidate`.
+
+### Проверки редакции 8.3
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 115 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py preflight --mode testnet
+blocked: нет PostgreSQL, нет testnet Bybit credentials, нельзя проверить unresolved incidents без БД
+
+python main.py preflight --mode live
+blocked: нет PostgreSQL, нет live flags/credentials, нет Go/No-Go evidence, нельзя проверить unresolved incidents без БД
+```
+
+### Итог редакции 8.3
+
+Статус проекта не меняется: `test-ready`, `paper-ready` после подключения PostgreSQL/runtime data, `technical-live-ready` как live-gated кодовая база, `live-blocked` до внешних gates.

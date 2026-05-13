@@ -113,6 +113,7 @@ def approve_signal(
     # Сигнал не может попасть в sizing без stop, invalidator, evidence и feature_hash.
     fail_if(signal.stop_price is None or not signal.invalidator, 'missing_stop_or_invalidator')
     fail_if(not signal.feature_hash, 'missing_feature_hash')
+    fail_if(not signal.regime_id or not signal.feature_id or not signal.required_data, 'incomplete_signal_lineage')
     fail_if(not signal.evidence and not signal.shadow_only, 'missing_strategy_evidence')
     fail_if(signal.entry_price <= 0, 'invalid_entry_price')
     fail_if(signal.expected_gross_edge_bps <= 0, 'missing_or_nonpositive_gross_edge')

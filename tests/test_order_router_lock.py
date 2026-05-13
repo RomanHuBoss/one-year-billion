@@ -6,7 +6,12 @@ from app.schemas.domain import RiskDecision, Side, SignalCandidate, SizingResult
 
 
 def make_signal(signal_id: str) -> SignalCandidate:
-    return SignalCandidate(signal_id=signal_id, strategy='micro_grid', symbol='BTCUSDT', side=Side.BUY, entry_price=100000, stop_price=99000, invalidator='range_break', expected_gross_edge_bps=30, trace_id='t', strategy_version='1', feature_hash='fh', evidence={'x': 1})
+    return SignalCandidate(
+        signal_id=signal_id, strategy='micro_grid', symbol='BTCUSDT', side=Side.BUY,
+        entry_price=100000, stop_price=99000, invalidator='range_break', expected_gross_edge_bps=30,
+        required_data=['range_bounds', 'orderbook', 'funding'], regime_id='reg-lock', feature_id=f'feat-{signal_id}',
+        trace_id='t', strategy_version='1', feature_hash='fh', evidence={'x': 1},
+    )
 
 
 def make_risk(signal: SignalCandidate) -> RiskDecision:

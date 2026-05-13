@@ -188,3 +188,14 @@ def test_nonfinite_risk_config_rejected_fail_closed():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(risk_pct_default=float('nan'), min_net_edge_bps=0))
     assert not rd.approved
     assert 'invalid_risk_config' in rd.reasons
+
+
+def test_incomplete_signal_lineage_rejected_before_order_route():
+    signal, ml, account, market, specs = base_objects()
+    signal.evidence = {'range_quality': 'ok'}
+    signal.required_data = []
+    signal.regime_id = None
+    signal.feature_id = None
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'incomplete_signal_lineage' in rd.reasons

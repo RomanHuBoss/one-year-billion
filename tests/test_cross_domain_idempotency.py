@@ -9,7 +9,8 @@ def _signal() -> SignalCandidate:
     return SignalCandidate(
         signal_id='s-cross', strategy='micro_grid', symbol='BTCUSDT', side=Side.BUY,
         entry_price=100000, stop_price=99000, invalidator='range_break',
-        expected_gross_edge_bps=30, trace_id='t-cross', strategy_version='1',
+        expected_gross_edge_bps=30, required_data=['range_bounds', 'orderbook', 'funding'],
+        regime_id='reg-cross', feature_id='feat-cross', trace_id='t-cross', strategy_version='1',
         feature_hash='fh-cross', evidence={'range_quality': 'ok'},
     )
 

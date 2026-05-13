@@ -458,3 +458,30 @@ python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybi
 ## Редакция 8.2 — numeric fail-closed hardening
 
 Дополнительно проверены числовые входы `SignalCandidate`, `RiskConfig` и `CostModel`. `NaN`, `inf`, отрицательные комиссии/буферы и невалидные risk-config значения теперь не могут пройти через сравнения Python и приводят к rejected `RiskDecision` с причинами `invalid_signal_numeric_value`, `invalid_risk_config` или `invalid_cost_model`. Добавлены regression-тесты hard-invariants.
+
+---
+
+## Редакция 8.3 — дополнительное закрытие обходов SignalCandidate/RiskDecision
+
+Дата проверки: 2026-05-13.
+
+### Исправления
+
+- `RiskEngine` теперь требует полную lineage-связку `regime_id`, `feature_id`, `required_data` до approval.
+- `OrderRouter` повторно проверяет lineage/evidence и не создает `OrderIntent`, если claimed approved sizing нарушает risk budget.
+- `Repository.verify_live_risk_decision()` сверяет HTTP payload `RiskDecision.sizing` с persisted DB sizing до создания order reservation.
+- Добавлены 3 regression-теста для новых hard-invariants.
+
+### Проверки
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 115 passed, 1 warning
+strategy import check: PASS
+architecture check: PASS
+migration invariant check: PASS
+secret scan: PASS
+```
+
+Testnet/live preflight в песочнице корректно возвращают `blocked` из-за отсутствующих внешних зависимостей: PostgreSQL, Bybit keys/runtime permissions и Go/No-Go evidence.

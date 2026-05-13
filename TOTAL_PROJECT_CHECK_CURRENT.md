@@ -1,4 +1,4 @@
-# Текущая проверка total_project_check — редакция 8.2
+# Текущая проверка total_project_check — редакция 8.3
 
 ## Результат
 
@@ -18,16 +18,16 @@
 - Econometrics/math: costs, net edge, no gross-only live basis, ML leakage checks, same-bar ambiguity conservative.
 - CLI: `python main.py`, `validate`, `preflight --mode testnet`, `preflight --mode live`, `serve --mode testnet/live`.
 
-## Исправления редакции 8.2
+## Исправления редакции 8.3
 
-- Усилен `app/risk_engine/approval.py`: `NaN`, `inf` и невалидные числовые значения `SignalCandidate`, `RiskConfig`, `CostModel` теперь fail-closed приводят к rejected `RiskDecision`.
-- Добавлены regression-тесты в `tests/test_risk_engine.py`:
-  - `test_nan_signal_edge_rejected_fail_closed`;
-  - `test_infinite_entry_price_rejected_fail_closed`;
-  - `test_negative_cost_model_rejected_fail_closed`;
-  - `test_nonfinite_risk_config_rejected_fail_closed`.
-- Актуализированы счетчики тестов в `README.md`, `docs/RUNBOOK.md`, `docs/GO_NO_GO.md`.
-- Добавлены записи редакции 8.2 в `TOTAL_PROJECT_CHECK_REPORT.md` и `DELIVERY_REPORT.md`.
+- Усилен `app/risk_engine/approval.py`: approved risk decision теперь требует полную lineage-связку `regime_id`, `feature_id`, `required_data` до risk approval. Candidate без этой связки получает `incomplete_signal_lineage` и не может стать основанием для order.
+- Усилен `app/execution/order_router.py`: даже если в HTTP/paper payload ошибочно передан `approved=True`, router заново проверяет stop/invalidator, feature_hash, evidence, lineage, положительный net edge и `max_loss_if_stop <= risk_budget`.
+- Усилен `app/db/repository.py`: live route теперь сверяет sizing из HTTP `RiskDecision` с persisted `risk_decisions.sizing_json` до insert в `orders`, чтобы подмена qty/notional/max_loss в payload блокировалась до DB trigger.
+- Добавлены regression-тесты:
+  - `test_incomplete_signal_lineage_rejected_before_order_route`;
+  - `test_order_router_rejects_incomplete_signal_lineage_even_with_approved_risk`;
+  - `test_order_router_rejects_claimed_approved_risk_that_breaks_budget`.
+- Обновлены тестовые fixtures live-submit/order-router под обязательную lineage-модель SignalCandidate.
 
 ## Запущенные проверки
 
@@ -39,7 +39,7 @@ python main.py validate
 
 ```text
 compileall: PASS
-pytest: 112 passed, 1 warning
+pytest: 115 passed, 1 warning
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS

@@ -222,6 +222,36 @@ class Repository:
             reasons.append('risk_decision_feature_hash_mismatch_db')
         if row['config_hash'] != risk.config_hash:
             reasons.append('risk_decision_config_hash_mismatch_db')
+
+        # Live route получает RiskDecision из HTTP payload, но source of truth — БД.
+        # До insert в orders повторно сверяем sizing с persisted decision, чтобы
+        # подмена qty/notional/max_loss в payload не дошла даже до DB trigger.
+        db_sizing = row.get('sizing_json') or {}
+        if isinstance(db_sizing, str):
+            try:
+                db_sizing = json.loads(db_sizing)
+            except json.JSONDecodeError:
+                db_sizing = {}
+        for field in ('qty', 'notional', 'risk_budget', 'max_loss_if_stop', 'expected_net_edge_bps'):
+            if field not in db_sizing:
+                reasons.append(f'risk_decision_db_sizing_missing:{field}')
+                continue
+            try:
+                db_value = float(db_sizing[field])
+                payload_value = float(getattr(risk.sizing, field))
+            except (TypeError, ValueError):
+                reasons.append(f'risk_decision_db_sizing_invalid:{field}')
+                continue
+            tolerance = max(abs(db_value), abs(payload_value), 1.0) * 1e-9
+            if abs(db_value - payload_value) > tolerance:
+                reasons.append(f'risk_decision_sizing_mismatch_db:{field}')
+        try:
+            if float(db_sizing.get('max_loss_if_stop', 0)) > float(db_sizing.get('risk_budget', -1)):
+                reasons.append('risk_decision_db_sizing_breaks_budget')
+            if float(db_sizing.get('expected_net_edge_bps', 0)) <= 0:
+                reasons.append('risk_decision_db_no_positive_net_edge')
+        except (TypeError, ValueError):
+            reasons.append('risk_decision_db_sizing_invalid')
         return not reasons, reasons
 
     def get_order_by_idempotency(self, idempotency_key: str) -> dict[str, Any] | None:
