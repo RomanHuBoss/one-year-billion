@@ -408,3 +408,27 @@ blocked: нет PostgreSQL, нет live flags/credentials, нет Go/No-Go evide
 ### Итог редакции 8.3
 
 Статус проекта не меняется: `test-ready`, `paper-ready` после подключения PostgreSQL/runtime data, `technical-live-ready` как live-gated кодовая база, `live-blocked` до внешних gates.
+
+
+## Редакция 8.4 — frontend source-of-truth hardening для paper-резюме
+
+### Исправления
+
+- `app/paper_trading/pipeline.py`: backend возвращает явный `status`/`reasons` для paper-решений.
+- `frontend/js/app.js`: удален локальный вывод статуса из `risk.approved`; paper-резюме только отображает backend-status.
+- `scripts/check_architecture.py`: добавлена static-проверка против повторного появления frontend status-derivation.
+- `tests/test_operator_module.py`: добавлен regression-тест source-of-truth для paper summary.
+
+### Проверки
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 116 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+```
+
+`python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице корректно возвращают `blocked` без внешних PostgreSQL/Bybit/Go-No-Go gate.

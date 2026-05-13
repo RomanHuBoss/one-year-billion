@@ -67,7 +67,17 @@ class PaperPipeline:
                     break
                 ml = self.ml.evaluate(cand)
                 risk = approve_signal(cand, ml, account, market, specs, self.risk_config, self.cost_model)
-                row = {'symbol': symbol, 'strategy': cand.strategy, 'ml': ml.model_dump(), 'risk': risk.model_dump(mode='json')}
+                # Paper endpoint тоже возвращает готовый backend-status.
+                # Frontend не должен выводить статус из risk.approved локально: даже
+                # smoke-резюме должно оставаться отображением backend-contract.
+                row = {
+                    'symbol': symbol,
+                    'strategy': cand.strategy,
+                    'status': 'risk_approved' if risk.approved else 'risk_rejected',
+                    'reasons': [] if risk.approved else list(risk.reasons),
+                    'ml': ml.model_dump(),
+                    'risk': risk.model_dump(mode='json'),
+                }
                 if risk.approved:
                     row['order_intent'] = self.router.build_intent(cand, risk, f'paper-{cand.signal_id}').model_dump(mode='json')
                 decisions.append(row)

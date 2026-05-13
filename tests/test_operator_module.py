@@ -39,6 +39,23 @@ def test_operator_frontend_is_not_raw_json_dashboard():
     assert '<pre id="runtime"' not in html
 
 
+
+
+def test_paper_summary_does_not_derive_status_from_frontend_risk_approval():
+    client = TestClient(app)
+    response = client.post('/api/paper/run-once')
+    assert response.status_code == 200
+    decisions = response.json()['data']['decisions']
+    assert decisions
+    assert all('status' in row for row in decisions)
+
+    app_js = open('frontend/js/app.js', encoding='utf-8').read()
+    assert 'row.risk?.approved' not in app_js
+    assert 'row.risk.approved' not in app_js
+    assert "? 'risk_approved'" not in app_js
+    assert '? "risk_approved"' not in app_js
+    assert 'status_from_backend_missing' in app_js
+
 def test_operator_frontend_has_context_help_on_right_click():
     html = open('frontend/index.html', encoding='utf-8').read()
     js = open('frontend/js/app.js', encoding='utf-8').read()

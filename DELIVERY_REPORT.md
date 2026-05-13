@@ -485,3 +485,12 @@ secret scan: PASS
 ```
 
 Testnet/live preflight в песочнице корректно возвращают `blocked` из-за отсутствующих внешних зависимостей: PostgreSQL, Bybit keys/runtime permissions и Go/No-Go evidence.
+
+
+## Редакция 8.4 — frontend source-of-truth hardening для paper-резюме
+
+- Paper endpoint теперь возвращает явный `status`/`reasons` по каждому решению, включая `risk_approved`/`risk_rejected`.
+- Frontend больше не выводит paper-статус из `risk.approved` и не содержит ternary-логики `risk_approved/risk_rejected`.
+- `scripts/check_architecture.py` получил static guard против такого локального вывода статуса.
+- Добавлен regression-тест `test_paper_summary_does_not_derive_status_from_frontend_risk_approval`.
+- Актуальная проверка: `python main.py validate` — `116 passed, 1 warning`; testnet/live preflight корректно остаются `blocked` без PostgreSQL, Bybit credentials/runtime и Go/No-Go evidence.

@@ -182,7 +182,7 @@ function renderOperatorCommands(commands) {
     return;
   }
   const names = operatorCommands.map(cmd => cmd.title).join(' · ');
-  box.textContent = `Доступные backend-команды: ${names}. Запускайте их кнопками прямо в карточках плана.`;
+  box.textContent = `Доступные серверные команды: ${names}. Запускайте их кнопками прямо в карточках плана.`;
 }
 
 async function loadCommands() {
@@ -205,7 +205,7 @@ function renderJob(job) {
       ${badge(job.status, job.status === 'ok' ? 'ok' : job.status === 'running' || job.status === 'queued' ? 'info' : 'danger')}
     </div>
     <p><strong>Команда:</strong> <code>${escapeHtml(job.command_display || '')}</code></p>
-    <p><strong>Job:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Exit:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>
+    <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>
     ${error}${stdout}${stderr}
   `;
 }
@@ -234,7 +234,7 @@ async function runOperatorCommand(commandId) {
   }
   try {
     resultBox.className = 'job-output';
-    resultBox.textContent = 'Команда отправлена в backend...';
+    resultBox.textContent = 'Команда отправлена на сервер...';
     const payload = await api(`/api/operator/commands/${encodeURIComponent(commandId)}/run`, {
       method: 'POST',
       headers: {
@@ -263,9 +263,11 @@ function renderPaperSummary(data) {
     return;
   }
   $('paperSummary').innerHTML = decisions.map(row => {
-    const status = row.status || (row.risk?.approved ? 'risk_approved' : 'risk_rejected');
+    // Статус paper-решения формирует сервер. Браузер только отображает
+    // готовое значение и не выводит его из вложенных полей risk.
+    const status = row.status || 'status_from_backend_missing';
     const strategy = row.strategy ? ` · ${row.strategy}` : '';
-    const reasons = row.reasons || row.risk?.reasons || [];
+    const reasons = row.reasons || [];
     return `<div class="paper-item" data-help="paper"><strong>${escapeHtml(row.symbol)}${escapeHtml(strategy)} — ${escapeHtml(status)}</strong><span>${escapeHtml(reasons.join('; ') || 'решение записано')}</span></div>`;
   }).join('');
 }
@@ -320,7 +322,7 @@ async function submitSafeAction(action) {
       },
       body: JSON.stringify({ action, reason, target: selectedSymbol ? { symbol: selectedSymbol.symbol } : {} }),
     });
-    resultBox.textContent = `Ответ backend: ${result.status}\n${pretty(result.data)}`;
+    resultBox.textContent = `Ответ сервера: ${result.status}\n${pretty(result.data)}`;
     await loadAll();
   } catch (err) {
     resultBox.className = 'callout error';

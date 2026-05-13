@@ -1,33 +1,30 @@
-# Текущая проверка total_project_check — редакция 8.3
+# Текущая проверка total_project_check — редакция 8.4
 
 ## Результат
 
-Проект приведен к состоянию **technical-live-ready / live-gated**: локальный запуск, paper/testnet-preflight и проверочный pipeline работают; live-submit остается fail-closed до внешних gate: PostgreSQL, Bybit runtime/private API, 14+ дней Phase 0 paper/shadow evidence, reconciliation/security/CI evidence, подписанный Go/No-Go PASS и unresolved CRITICAL/HIGH = 0.
+Проект находится в состоянии **test-ready / paper-ready для локального smoke / technical-live-ready как live-gated кодовая база**. Фактический live остается **live-blocked**, пока внешняя среда не подтвердит PostgreSQL, Bybit testnet/prod runtime, private permissions, 14+ дней Phase 0 paper/shadow evidence, reconciliation/security/CI evidence, подписанный Go/No-Go PASS и unresolved CRITICAL/HIGH = 0.
 
-## Что было проверено
+## Что проверено
 
 - Архитектура слоев: `market_data`, `regime`, `strategies`, `ml`, `risk_engine`, `execution`, `reconciliation`, `api`, `frontend`.
-- Отсутствие прямого пути strategy -> Bybit/execution/order router.
+- Отсутствие прямого пути `strategy -> Bybit/execution/order router`.
 - Risk engine как hard gate: approved non-expired `risk_decision_id` обязателен для order.
 - Execution safety: deterministic `orderLinkId`, idempotency, per-symbol lock, HTTP ack != fill, reconciliation/protection перед ACTIVE.
 - DB hard-invariants: approved risk decision, unique idempotency/client order, ACTIVE только с protection/reconciliation, lineage.
 - Runtime data gates: stale instruments/account/orderbook/funding fail-closed.
 - Phase 0 scope: BTCUSDT/ETHUSDT/SOLUSDT; carry/stat-arb только shadow; DCA/martingale/spot/inverse/options/copy/signal/portfolio запрещены.
-- Frontend source-of-truth: только backend `status_effective`, без ключей и без Bybit-вызовов.
+- Frontend source-of-truth: только серверные `status_effective` и backend-status из API, без ключей, без Bybit-вызовов и без локального вывода статуса из `risk.approved`.
 - Security: server-side secrets, redaction, secret scan, unsafe defaults blocked.
 - Econometrics/math: costs, net edge, no gross-only live basis, ML leakage checks, same-bar ambiguity conservative.
 - CLI: `python main.py`, `validate`, `preflight --mode testnet`, `preflight --mode live`, `serve --mode testnet/live`.
 
-## Исправления редакции 8.3
+## Исправления редакции 8.4
 
-- Усилен `app/risk_engine/approval.py`: approved risk decision теперь требует полную lineage-связку `regime_id`, `feature_id`, `required_data` до risk approval. Candidate без этой связки получает `incomplete_signal_lineage` и не может стать основанием для order.
-- Усилен `app/execution/order_router.py`: даже если в HTTP/paper payload ошибочно передан `approved=True`, router заново проверяет stop/invalidator, feature_hash, evidence, lineage, положительный net edge и `max_loss_if_stop <= risk_budget`.
-- Усилен `app/db/repository.py`: live route теперь сверяет sizing из HTTP `RiskDecision` с persisted `risk_decisions.sizing_json` до insert в `orders`, чтобы подмена qty/notional/max_loss в payload блокировалась до DB trigger.
-- Добавлены regression-тесты:
-  - `test_incomplete_signal_lineage_rejected_before_order_route`;
-  - `test_order_router_rejects_incomplete_signal_lineage_even_with_approved_risk`;
-  - `test_order_router_rejects_claimed_approved_risk_that_breaks_budget`.
-- Обновлены тестовые fixtures live-submit/order-router под обязательную lineage-модель SignalCandidate.
+- Исправлен `app/paper_trading/pipeline.py`: paper endpoint теперь возвращает явные `status` и `reasons` по каждому paper-решению. Это убирает необходимость для браузера локально выводить статус из `risk.approved`.
+- Исправлен `frontend/js/app.js`: paper-резюме отображает только готовый backend-status; fallback помечает отсутствие серверного статуса как `status_from_backend_missing`, а не строит локальную бизнес-логику.
+- Усилен `scripts/check_architecture.py`: добавлен static guard против локального frontend-вывода статуса из `row.risk.approved` / `risk_approved` ternary.
+- Добавлен regression-тест `test_paper_summary_does_not_derive_status_from_frontend_risk_approval`.
+- Дополнительно русифицированы пользовательские подписи в операторском frontend: `source of truth`, `backend`, `Job`, `Exit`, `safe-actions` заменены на русские формулировки, не меняя технических идентификаторов.
 
 ## Запущенные проверки
 
@@ -39,7 +36,7 @@ python main.py validate
 
 ```text
 compileall: PASS
-pytest: 115 passed, 1 warning
+pytest: 116 passed, 1 warning
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -67,8 +64,9 @@ python main.py preflight --mode live
 - 14+ дней Phase 0 paper/shadow evidence.
 - Подписанный Go/No-Go PASS в production-БД.
 
-## Финальный статус
+## Итоговый статус
 
 - Локальный запуск: PASS.
-- Testnet/paper готовность: технически подготовлено, но preflight требует внешнюю БД и testnet credentials.
+- Testnet/paper готовность: технически подготовлено, но testnet preflight требует внешнюю БД и testnet credentials.
+- Technical-live-ready: кодовая база готова как fail-closed/live-gated система.
 - Live: **не разрешен** до прохождения внешних gate. Это корректное поведение; unsafe live-submit технически заблокирован.

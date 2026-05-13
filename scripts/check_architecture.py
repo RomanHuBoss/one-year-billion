@@ -9,6 +9,12 @@ REQUIRED_DIRS = [
 ]
 STRATEGY_FORBIDDEN = ('app.execution', 'app.reconciliation', 'bybit_adapter', 'order_router', 'exchange_client')
 FRONTEND_FORBIDDEN = ('BYBIT_API_KEY', 'BYBIT_API_SECRET', 'api.bybit.com', 'api-testnet.bybit.com', '/v5/order', '/v5/market')
+FRONTEND_LOCAL_STATUS_DERIVATION = (
+    'row.risk?.approved',
+    'row.risk.approved',
+    "? 'risk_approved'",
+    '? "risk_approved"',
+)
 TARGET_FORBIDDEN_PATHS = [Path('app/risk_engine'), Path('app/execution')]
 TARGET_FORBIDDEN_TOKENS = ('target_equity_usdt', 'target_equity', '2000x')
 
@@ -89,6 +95,9 @@ def main() -> int:
         for token in FRONTEND_FORBIDDEN:
             if token in text:
                 failures.append(f'frontend_forbidden_secret_or_bybit_call:{path}:{token}')
+        for token in FRONTEND_LOCAL_STATUS_DERIVATION:
+            if token in text:
+                failures.append(f'frontend_local_status_derivation:{path}:{token}')
 
     cycles = _detect_app_cycles()
     if cycles:
