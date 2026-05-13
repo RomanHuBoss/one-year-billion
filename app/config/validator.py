@@ -40,10 +40,25 @@ def validate_config(cfg: dict[str, Any]) -> list[str]:
             reasons.append(f'{field}_must_be_nonnegative')
     if float(risk.get('max_effective_leverage', 0)) <= 0:
         reasons.append('max_effective_leverage_must_be_positive')
+
+    # Phase 0 — самый уязвимый контур малого счета. Верхние лимиты должны
+    # проверяться валидатором конфига, а не оставаться только текстом в README.
+    phase = int(account.get('phase', 0))
+    if phase <= 0:
+        if float(risk.get('risk_pct_default', account.get('risk_pct_default', 0))) > 0.015:
+            reasons.append('phase0_risk_default_above_1_5pct')
+        if float(risk.get('risk_pct_absolute_max', account.get('risk_pct_absolute_max', 0.015))) > 0.015:
+            reasons.append('phase0_risk_absolute_above_1_5pct')
+        if float(risk.get('max_effective_leverage', account.get('max_effective_leverage', 0))) > 3.0:
+            reasons.append('phase0_default_leverage_above_3x')
+        if float(risk.get('max_effective_leverage_absolute', account.get('max_effective_leverage_absolute', 5.0))) > 5.0:
+            reasons.append('phase0_absolute_leverage_above_5x')
+        if int(risk.get('turnover_round_turns_per_day', 4)) > 4:
+            reasons.append('phase0_turnover_above_4_round_turns_per_day')
+
     live = {str(x).lower() for x in account.get('live_strategies', [])}
     if live & FORBIDDEN_TERMS:
         reasons.append('forbidden_strategy_in_live_permissions')
-    phase = int(account.get('phase', 0))
     universe = {str(x).upper() for x in account.get('live_universe', [])}
     if phase <= 1 and ({'carry_live','statarb_live'} & live):
         reasons.append('carry_statarb_live_forbidden_phase_0_1')

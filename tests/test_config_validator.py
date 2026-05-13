@@ -41,3 +41,20 @@ def test_negative_cost_or_liquidity_parameters_are_rejected():
     cfg['risk.yaml']['slippage_buffer_bps'] = -0.01
     with pytest.raises(ConfigValidationError, match='slippage_buffer_bps_must_be_nonnegative'):
         validate_config(cfg)
+
+
+@pytest.mark.parametrize(
+    ('field', 'value', 'reason'),
+    [
+        ('risk_pct_default', 0.016, 'phase0_risk_default_above_1_5pct'),
+        ('risk_pct_absolute_max', 0.02, 'phase0_risk_absolute_above_1_5pct'),
+        ('max_effective_leverage', 3.1, 'phase0_default_leverage_above_3x'),
+        ('max_effective_leverage_absolute', 5.1, 'phase0_absolute_leverage_above_5x'),
+        ('turnover_round_turns_per_day', 5, 'phase0_turnover_above_4_round_turns_per_day'),
+    ],
+)
+def test_phase0_hard_caps_are_enforced_by_config_validator(field, value, reason):
+    cfg = _valid_cfg(['breakout'])
+    cfg['risk.yaml'][field] = value
+    with pytest.raises(ConfigValidationError, match=reason):
+        validate_config(cfg)

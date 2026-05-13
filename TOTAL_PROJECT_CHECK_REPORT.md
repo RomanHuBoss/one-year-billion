@@ -299,7 +299,7 @@ Acceptance evidence:
 ```text
 python main.py validate
 compileall: PASS
-pytest: 103 passed, 1 warning
+pytest: 108 passed, 1 warning
 scripts/check_strategy_imports.py: PASS
 scripts/check_architecture.py: PASS
 scripts/check_migrations_static.py: PASS
@@ -312,6 +312,59 @@ python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybi
 ```
 
 ### Итог редакции 8.0
+
+Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL и runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до внешних gates.
+
+---
+
+## Редакция 8.1 — hardening Phase 0 caps и текущая проверка
+
+Дата проверки: 2026-05-13.
+
+### Найденный и исправленный дефект
+
+`app/config/validator.py` раньше проверял, что risk/leverage default не выше absolute max, но не закреплял сами верхние Phase 0 caps из спецификации/roadmap. Это оставляло конфигурационный путь, при котором в YAML можно было поднять `risk_pct_absolute_max`, `max_effective_leverage_absolute` или дневной turnover без явного runtime-доказательства.
+
+### Исправление
+
+- Для Phase 0 валидатор теперь fail-closed отклоняет:
+  - `risk_pct_default > 0.015`;
+  - `risk_pct_absolute_max > 0.015`;
+  - `max_effective_leverage > 3.0`;
+  - `max_effective_leverage_absolute > 5.0`;
+  - `turnover_round_turns_per_day > 4`.
+- Добавлены regression-тесты на каждый новый hard cap.
+
+### Измененные файлы редакции 8.1
+
+- `app/config/validator.py`
+- `tests/test_config_validator.py`
+- `README.md`
+- `docs/GO_NO_GO.md`
+- `DELIVERY_REPORT.md`
+- `TOTAL_PROJECT_CHECK_REPORT.md`
+
+### Проверки редакции 8.1
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 108 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+node --check frontend/js/api_client.js: PASS
+node --check frontend/js/app.js: PASS
+node --check frontend/js/context_help.js: PASS
+node --check frontend/js/status_contract.js: PASS
+
+python main.py preflight --mode testnet: blocked fail-closed без PostgreSQL/Bybit keys
+python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+### Итог редакции 8.1
 
 Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL и runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до внешних gates.
 
