@@ -4,6 +4,10 @@ from app.schemas.domain import OrderIntent, OrderState, RiskDecision, SignalCand
 from app.execution.idempotency import InMemoryIdempotencyStore, deterministic_order_link_id, namespaced_idempotency_key
 
 
+FORBIDDEN_PRODUCT_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot', 'portfolio_bot'}
+SHADOW_ONLY_STRATEGIES_PHASE_0_1 = {'carry', 'carry_live', 'funding', 'funding_carry', 'pair_statarb', 'statarb', 'statarb_live', 'stat_arb'}
+
+
 class OrderRouter:
     def __init__(self, idempotency: InMemoryIdempotencyStore | None = None):
         self.idempotency = idempotency or InMemoryIdempotencyStore()
@@ -24,7 +28,10 @@ class OrderRouter:
                 raise ValueError('idempotency_key_reserved_for_other_domain')
             self._assert_cached_request_matches(cached, signal, risk)
             return cached
-        if signal.shadow_only:
+        strategy_name = signal.strategy.lower()
+        if strategy_name in FORBIDDEN_PRODUCT_STRATEGIES:
+            raise ValueError('strategy_forbidden_product_scope')
+        if signal.shadow_only or strategy_name in SHADOW_ONLY_STRATEGIES_PHASE_0_1:
             raise ValueError('shadow_signal_has_no_live_route')
         if not risk.approved:
             raise ValueError('risk_decision_not_approved')

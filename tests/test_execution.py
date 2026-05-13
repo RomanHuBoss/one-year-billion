@@ -56,3 +56,29 @@ def test_order_router_rejects_claimed_approved_risk_that_breaks_budget():
     import pytest
     with pytest.raises(ValueError, match='approved_sizing_breaks_risk_budget'):
         router.build_intent(signal, risk, 'key-budget')
+
+
+def test_order_router_rejects_forbidden_product_strategy_even_with_forged_risk():
+    import pytest
+    signal = SignalCandidate(
+        signal_id='s-forbidden', strategy='portfolio_bot', symbol='BTCUSDT', side=Side.BUY,
+        entry_price=100000, stop_price=99000, invalidator='x', expected_gross_edge_bps=30,
+        required_data=['range_bounds'], regime_id='reg-forbidden', feature_id='feat-forbidden',
+        trace_id='t-forbidden', strategy_version='1', feature_hash='fh-forbidden', evidence={'edge':'ok'},
+    )
+    risk = approved_risk(signal)
+    with pytest.raises(ValueError, match='strategy_forbidden_product_scope'):
+        OrderRouter().build_intent(signal, risk, 'key-forbidden')
+
+
+def test_order_router_rejects_carry_route_even_with_forged_risk():
+    import pytest
+    signal = SignalCandidate(
+        signal_id='s-carry', strategy='carry_live', symbol='BTCUSDT', side=Side.BUY,
+        entry_price=100000, stop_price=99000, invalidator='x', expected_gross_edge_bps=30,
+        required_data=['funding'], regime_id='reg-carry', feature_id='feat-carry',
+        trace_id='t-carry', strategy_version='1', feature_hash='fh-carry', evidence={'edge':'ok'},
+    )
+    risk = approved_risk(signal)
+    with pytest.raises(ValueError, match='shadow_signal_has_no_live_route'):
+        OrderRouter().build_intent(signal, risk, 'key-carry')

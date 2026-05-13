@@ -199,3 +199,22 @@ def test_incomplete_signal_lineage_rejected_before_order_route():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
     assert not rd.approved
     assert 'incomplete_signal_lineage' in rd.reasons
+
+
+def test_exchange_max_leverage_from_runtime_specs_is_hard_cap():
+    signal, ml, account, market, specs = base_objects()
+    # Bybit runtime specs can be stricter than internal phase policy. If exchange
+    # maxLeverage is below the computed effective leverage, risk must reject.
+    specs.max_leverage = 0.5
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, reserve_cash_pct=0.0, max_effective_leverage=3.0))
+    assert not rd.approved
+    assert 'instrument_max_leverage_cap' in rd.reasons
+
+
+def test_missing_cost_model_component_rejected_without_exception():
+    from app.risk_engine.cost_model import CostModel
+    signal, ml, account, market, specs = base_objects()
+    broken_costs = CostModel(maker_fee_bps=None)  # type: ignore[arg-type]
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0), broken_costs)
+    assert not rd.approved
+    assert 'invalid_cost_model' in rd.reasons

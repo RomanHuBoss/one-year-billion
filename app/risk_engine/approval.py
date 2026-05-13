@@ -12,7 +12,7 @@ SHADOW_ONLY_STRATEGIES_PHASE_0_1 = {
     'carry', 'carry_live', 'funding', 'funding_carry',
     'pair_statarb', 'statarb', 'statarb_live', 'stat_arb',
 }
-FORBIDDEN_PRODUCT_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot'}
+FORBIDDEN_PRODUCT_STRATEGIES = {'martingale', 'dca', 'spot_grid', 'inverse_futures', 'options', 'copy_trading', 'signal_bot', 'portfolio_bot'}
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,29 @@ class RiskConfig:
     min_depth_usdt: float = 1_000_000
     min_net_edge_bps: float = 2.0
     config_hash: str = 'default-config'
+
+
+def _is_finite_number(value: object) -> bool:
+    """True only for numeric values that cannot hide NaN/inf/None.
+
+    Pydantic and dataclass boundaries are helpful, but live risk gates must not
+    rely on Python exceptions. Any value that cannot be converted to a finite
+    float is treated as invalid input and leads to rejected RiskDecision, not
+    to HTTP 500 or advisory pass.
+    """
+
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def _is_nonnegative_number(value: object) -> bool:
+    return _is_finite_number(value) and float(value) >= 0
+
+
+def _is_positive_number(value: object) -> bool:
+    return _is_finite_number(value) and float(value) > 0
 
 
 def approve_signal(
@@ -55,7 +78,7 @@ def approve_signal(
     signal_numbers = (signal.entry_price, signal.expected_gross_edge_bps)
     if signal.stop_price is not None:
         signal_numbers = (*signal_numbers, signal.stop_price)
-    fail_if(any(not math.isfinite(float(x)) for x in signal_numbers), 'invalid_signal_numeric_value')
+    fail_if(any(not _is_finite_number(x) for x in signal_numbers), 'invalid_signal_numeric_value')
 
     cfg_numbers = (
         cfg.risk_pct_default, cfg.max_effective_leverage, cfg.reserve_cash_pct,
@@ -63,16 +86,16 @@ def approve_signal(
         cfg.max_spread_bps, cfg.min_depth_usdt, cfg.min_net_edge_bps,
     )
     fail_if(
-        any(not math.isfinite(float(x)) for x in cfg_numbers)
-        or cfg.risk_pct_default <= 0
-        or cfg.max_effective_leverage <= 0
-        or cfg.reserve_cash_pct < 0
-        or cfg.max_daily_loss_pct < 0
-        or cfg.max_weekly_loss_pct < 0
-        or cfg.min_liq_distance_pct < 0
-        or cfg.max_spread_bps < 0
-        or cfg.min_depth_usdt < 0
-        or cfg.min_net_edge_bps < 0,
+        any(not _is_finite_number(x) for x in cfg_numbers)
+        or not _is_positive_number(cfg.risk_pct_default)
+        or not _is_positive_number(cfg.max_effective_leverage)
+        or not _is_nonnegative_number(cfg.reserve_cash_pct)
+        or not _is_nonnegative_number(cfg.max_daily_loss_pct)
+        or not _is_nonnegative_number(cfg.max_weekly_loss_pct)
+        or not _is_nonnegative_number(cfg.min_liq_distance_pct)
+        or not _is_nonnegative_number(cfg.max_spread_bps)
+        or not _is_nonnegative_number(cfg.min_depth_usdt)
+        or not _is_nonnegative_number(cfg.min_net_edge_bps),
         'invalid_risk_config',
     )
     cost_numbers = (
@@ -80,7 +103,7 @@ def approve_signal(
         cost_model.funding_buffer_bps, cost_model.safety_buffer_bps,
     )
     fail_if(
-        any(not math.isfinite(float(x)) for x in cost_numbers) or any(float(x) < 0 for x in cost_numbers),
+        any(not _is_nonnegative_number(x) for x in cost_numbers),
         'invalid_cost_model',
     )
 
@@ -91,25 +114,20 @@ def approve_signal(
     fail_if(not specs.fresh or specs.category != 'linear' or specs.status != 'Trading', 'bad_instrument_specs')
     numeric_specs = (specs.tick_size, specs.qty_step, specs.min_qty, specs.min_notional, specs.max_leverage)
     fail_if(
-        any(not math.isfinite(float(x)) for x in numeric_specs)
-        or specs.tick_size <= 0
-        or specs.qty_step <= 0
-        or specs.min_qty <= 0
-        or specs.min_notional <= 0
-        or specs.max_leverage <= 0,
+        any(not _is_positive_number(x) for x in numeric_specs),
         'invalid_instrument_specs',
     )
     fail_if(
-        any(not math.isfinite(float(x)) for x in (market.bid1, market.ask1, market.spread_bps, market.depth_usdt, market.funding_bps))
-        or market.bid1 <= 0
-        or market.ask1 <= 0
+        any(not _is_finite_number(x) for x in (market.bid1, market.ask1, market.spread_bps, market.depth_usdt, market.funding_bps))
+        or not _is_positive_number(market.bid1)
+        or not _is_positive_number(market.ask1)
         or market.ask1 < market.bid1
-        or market.spread_bps < 0
-        or market.depth_usdt < 0,
+        or not _is_nonnegative_number(market.spread_bps)
+        or not _is_nonnegative_number(market.depth_usdt),
         'invalid_market_snapshot',
     )
-    fail_if(not math.isfinite(float(account.equity_usdt)) or account.equity_usdt <= 0, 'invalid_account_equity')
-    fail_if(not math.isfinite(float(account.available_balance_usdt)) or account.available_balance_usdt < 0, 'invalid_account_balance')
+    fail_if(not _is_positive_number(account.equity_usdt), 'invalid_account_equity')
+    fail_if(not _is_nonnegative_number(account.available_balance_usdt), 'invalid_account_balance')
     # Сигнал не может попасть в sizing без stop, invalidator, evidence и feature_hash.
     fail_if(signal.stop_price is None or not signal.invalidator, 'missing_stop_or_invalidator')
     fail_if(not signal.feature_hash, 'missing_feature_hash')
@@ -161,6 +179,9 @@ def approve_signal(
     fail_if(sizing.max_loss_if_stop > daily_remaining_risk, 'daily_remaining_risk_exceeded')
     fail_if(sizing.max_loss_if_stop > weekly_remaining_risk, 'weekly_remaining_risk_exceeded')
     fail_if(sizing.effective_leverage > cfg.max_effective_leverage, 'leverage_cap')
+    # Биржевой maxLeverage является runtime-fact: даже если внутренний phase cap
+    # выше, заявка не имеет права требовать плечо выше разрешенного Bybit specs.
+    fail_if(sizing.effective_leverage > specs.max_leverage, 'instrument_max_leverage_cap')
     portfolio_abs_after = account.portfolio_abs_notional_usdt + sizing.notional
     # Даже если отдельный абсолютный portfolio cap не задан в YAML, max effective
     # leverage остается hard cap для суммарной экспозиции портфеля.

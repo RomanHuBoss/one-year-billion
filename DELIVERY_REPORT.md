@@ -528,3 +528,13 @@ scripts/secret_scan.py: PASS
 - Исправлен случай, когда PostgreSQL подключен, но `latest_symbol_status` еще пуст после свежих миграций: operator dashboard теперь показывает Phase 0 symbols через backend fail-closed fallback, а не пустой список.
 - Добавлен regression-тест для защищенного dashboard с пустой DB status-view.
 - Цель исправления: `python main.py validate` должен проходить в testnet-окружении с пустой, но доступной БД.
+
+## Дополнительные исправления редакции 2.1
+
+- Risk engine получил fail-closed числовые guards для `None`/NaN/inf в risk config, cost model, runtime specs, market/account snapshots. Ошибка входных данных теперь приводит к rejected `RiskDecision`, а не к 500/bypass.
+- Добавлен `instrument_max_leverage_cap`: runtime `maxLeverage` Bybit является hard cap наряду с внутренним phase leverage cap.
+- Forbidden product scope расширен на `portfolio_bot` в risk engine и продублирован в execution router как защита от forged approved risk payload.
+- Execution router блокирует live route для carry/funding/stat-arb aliases даже если payload ошибочно не содержит `shadow_only=true`.
+- Bybit adapter усилил payload guard: `category=linear`, symbol заканчивается на `USDT`, side `Buy/Sell`, orderType `Limit/Market`, `orderLinkId<=36`, qty обязателен.
+- Добавлены тесты: `instrument_max_leverage_cap`, неполная cost model, forbidden strategy forged-risk route, carry route forged-risk, не-USDT symbol и unknown order type.
+- Финальная проверка: `python main.py validate` — `123 passed, 1 warning`; compileall, architecture/static checks, migration checks, secret scan — PASS.

@@ -211,8 +211,17 @@ class BybitAdapter:
     def place_order(self, payload: dict[str, Any]) -> dict[str, Any]:
         if payload.get('category') != 'linear':
             raise ValueError('category_must_be_linear')
+        symbol = str(payload.get('symbol') or '').upper()
+        if not symbol or not symbol.endswith('USDT'):
+            raise ValueError('symbol_must_be_linear_usdt_contract')
+        if payload.get('orderType') not in {'Limit', 'Market'}:
+            raise ValueError('order_type_not_allowed')
+        if payload.get('side') not in {'Buy', 'Sell'}:
+            raise ValueError('side_not_allowed')
         if not payload.get('orderLinkId') or len(str(payload.get('orderLinkId'))) > 36:
             raise ValueError('invalid_orderLinkId')
+        if not payload.get('qty'):
+            raise ValueError('qty_required')
         if not (self.cfg.trading_enabled and self.cfg.live_confirm):
             return {'retCode': 0, 'mode': 'paper_ack', 'result': {'orderId': f'paper-{hash_payload(payload)[:16]}', 'orderLinkId': payload.get('orderLinkId')}}
         return self._private_post('/v5/order/create', payload)

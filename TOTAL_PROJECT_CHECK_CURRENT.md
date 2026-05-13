@@ -84,3 +84,31 @@ python main.py preflight --mode live
 - Исправлен случай, когда PostgreSQL подключен, но `latest_symbol_status` еще пуст после свежих миграций: operator dashboard теперь показывает Phase 0 symbols через backend fail-closed fallback, а не пустой список.
 - Добавлен regression-тест для защищенного dashboard с пустой DB status-view.
 - Цель исправления: `python main.py validate` должен проходить в testnet-окружении с пустой, но доступной БД.
+
+## Редакция 8.8 — дополнительное hardening после повторной тотальной проверки
+
+- Усилен `app/risk_engine/approval.py`: все числовые входы risk/cost/spec/market/account теперь валидируются через fail-closed helpers без риска `TypeError`/`ValueError` вместо `RiskDecision(rejected)`.
+- Добавлен hard gate `instrument_max_leverage_cap`: расчетный effective leverage должен укладываться не только во внутренний phase cap, но и в runtime `maxLeverage` из Bybit instrument specs.
+- Расширен product-scope guard risk engine на `portfolio_bot`.
+- Усилен `app/execution/order_router.py`: даже при поддельном `approved=True` в payload forbidden strategies и carry/funding/stat-arb live aliases не получают execution route.
+- Усилен `app/execution/bybit_adapter.py`: paper/live `place_order` теперь отклоняет не-USDT символы, неизвестные типы ордеров, неверную сторону и пустой qty еще до paper/live ack.
+- Добавлены regression-тесты на runtime `maxLeverage`, неполную cost model, forged-risk обход в order router и не-USDT/unknown order type payload.
+
+Проверка редакции 8.8:
+
+```text
+python main.py validate
+```
+
+Результат:
+
+```text
+compileall: PASS
+pytest: 123 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+```
+
+CLI-preflight в песочнице ожидаемо остался `blocked`, так как отсутствуют внешние зависимости: PostgreSQL, Bybit testnet/live keys, runtime permissions, Go/No-Go evidence и возможность проверить unresolved CRITICAL/HIGH incidents.
