@@ -14,3 +14,4 @@ models/
 .DS_Store
 .idea/
 .vscode/
+/evidence/testnet_preflight_2026-05-13_PASS.json

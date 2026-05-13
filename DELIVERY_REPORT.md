@@ -494,3 +494,35 @@ Testnet/live preflight в песочнице корректно возвраща
 - `scripts/check_architecture.py` получил static guard против такого локального вывода статуса.
 - Добавлен regression-тест `test_paper_summary_does_not_derive_status_from_frontend_risk_approval`.
 - Актуальная проверка: `python main.py validate` — `116 passed, 1 warning`; testnet/live preflight корректно остаются `blocked` без PostgreSQL, Bybit credentials/runtime и Go/No-Go evidence.
+
+## Редакция 8.5 — защищенный testnet-dashboard и READONLY_API_KEY
+
+Дата проверки: 2026-05-13.
+
+### Исправления
+
+- `python main.py serve --mode testnet` теперь запускает `APP_ENV=testnet`, а не принудительный `APP_ENV=local`; dashboard открывает PostgreSQL runtime repository и не показывает ложный `database_available=false` после успешного testnet preflight.
+- Во frontend добавлен блок **Доступ к панели**: оператор вводит `READONLY_API_KEY`, ключ сохраняется только в `sessionStorage` текущей вкладки и автоматически отправляется как `x-api-key` для read-only endpoints.
+- `api_client.js` автоматически добавляет `x-api-key` из sessionStorage для чтения dashboard, списка команд, статуса jobs и paper smoke; явно переданный `OPERATOR_API_KEY` для write endpoints имеет приоритет.
+- `OPERATOR_API_KEY` можно временно использовать как read-key для polling результатов команды, но UI предупреждает, что предпочтителен отдельный `READONLY_API_KEY`.
+- Ошибка `401 invalid_api_key` теперь объясняет оператору, что нужно указать `READONLY_API_KEY`/`OPERATOR_API_KEY`.
+
+### Проверки
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 118 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+```
+
+### Операторский запуск testnet-dashboard
+
+```powershell
+python main.py serve --mode testnet --host 127.0.0.1 --port 8001
+```
+
+В браузере открыть `http://127.0.0.1:8001/`, вставить `READONLY_API_KEY` в блок **Доступ к панели**, нажать **Применить ключ чтения**, затем запускать `Testnet preflight` и `Paper один раз`. Live-флаги остаются выключенными.

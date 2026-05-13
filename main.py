@@ -37,9 +37,17 @@ def run_python(args: list[str]) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     load_dotenv()
-    if args.mode == 'testnet':
-        os.environ['BYBIT_TESTNET'] = 'true'
+    if args.mode == 'local':
         os.environ['APP_ENV'] = 'local'
+        os.environ['BYBIT_TESTNET'] = 'true'
+    elif args.mode == 'testnet':
+        # Testnet должен быть полноценным защищенным runtime-контуром: backend
+        # открывает PostgreSQL, dashboard требует READONLY_API_KEY, но live-submit
+        # остается выключенным отдельными safety-флагами. Раньше здесь принудительно
+        # ставился APP_ENV=local, из-за чего UI видел smoke-state и писал
+        # database_available=false при уже пройденном testnet preflight.
+        os.environ['BYBIT_TESTNET'] = 'true'
+        os.environ['APP_ENV'] = 'testnet'
     elif args.mode == 'live':
         os.environ['BYBIT_TESTNET'] = 'false'
         os.environ['APP_ENV'] = 'prod'

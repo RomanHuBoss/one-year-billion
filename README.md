@@ -303,3 +303,17 @@ main.py               единая CLI-точка запуска
 - аккаунт/ключ не имеет доступа к Linear USDT positions/wallet endpoints.
 
 В актуальной версии preflight пишет конкретные причины в `reasons` и безопасные детали в `data.bybit_private_errors`: `ret_code`, `ret_msg`, `path`, `check`. Секреты и ключи туда не выводятся. После правки `.env` перезапустите backend и повторите `python main.py preflight --mode testnet`.
+
+## Редакция 8.5: запуск защищенного testnet-dashboard
+
+В testnet-режиме dashboard защищен внутренним API-ключом. Запуск:
+
+```powershell
+python main.py serve --mode testnet --host 127.0.0.1 --port 8001
+```
+
+Откройте `http://127.0.0.1:8001/`. В верхнем блоке **Доступ к панели** вставьте `READONLY_API_KEY` из `.env` и нажмите **Применить ключ чтения**. Ключ хранится только в `sessionStorage` текущей вкладки браузера и используется как `x-api-key` для чтения dashboard, operator jobs и paper smoke. Для запуска команд используйте отдельный `OPERATOR_API_KEY`.
+
+`python main.py serve --mode testnet` выставляет `APP_ENV=testnet`, поэтому backend открывает PostgreSQL runtime repository. Это устраняет ложное состояние `database_available=false`, которое возникало при прежнем принудительном `APP_ENV=local`.
+
+Актуальная проверка: `python main.py validate` — `118 passed, 1 warning`; static architecture, migrations и secret scan — PASS.

@@ -164,3 +164,13 @@ input:focus, textarea:focus { border-color: #93c5fd; box-shadow: 0 0 0 4px rgba(
   .hero-card { padding: 18px; }
   .symbol-row { grid-template-columns: 1fr; }
 }
+.auth-panel { border-left: 6px solid #0f766e; }
+.auth-form { display: grid; grid-template-columns: minmax(260px, 1fr) auto auto; gap: 12px; align-items: end; margin-bottom: 10px; }
+.auth-status { padding: 10px 12px; border-radius: 13px; border: 1px solid var(--line); font-weight: 850; font-size: 13px; }
+.auth-status.ok { background: var(--green-bg); color: #047857; border-color: #bbf7d0; }
+.auth-status.warning { background: var(--amber-bg); color: #92400e; border-color: #fed7aa; }
+.auth-status.error { background: var(--red-bg); color: #7f1d1d; border-color: #fecaca; }
+.auth-status.info { background: var(--slate-bg); color: #334155; }
+@media (max-width: 820px) {
+  .auth-form { grid-template-columns: 1fr; }
+}

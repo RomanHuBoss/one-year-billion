@@ -179,3 +179,27 @@ def test_live_preflight_missing_schema_returns_blocked_not_traceback():
     assert 'incidents_table_missing_or_migrations_not_applied' in result.reasons
     assert 'go_no_go_tables_missing_or_migrations_not_applied' in result.reasons
     assert 'unresolved_critical_high_error' in result.data
+
+
+def test_operator_frontend_supports_readonly_api_key_for_protected_dashboard():
+    html = open('frontend/index.html', encoding='utf-8').read()
+    js = open('frontend/js/app.js', encoding='utf-8').read()
+    client_js = open('frontend/js/api_client.js', encoding='utf-8').read()
+
+    assert 'readonlyApiKey' in html
+    assert 'READONLY_API_KEY' in html
+    assert 'saveReadonlyKeyBtn' in html
+    assert 'clearReadonlyKeyBtn' in html
+    assert "sessionStorage.setItem(READONLY_KEY_STORAGE" in client_js
+    assert "headers['x-api-key'] = readKey" in client_js
+    assert 'Укажите READONLY_API_KEY' in client_js
+    assert 'getReadApiKey' in js
+    assert 'setReadApiKey' in js
+    assert 'initReadonlyKeyControls' in js
+
+
+def test_cli_testnet_serve_uses_testnet_app_env_not_local_smoke():
+    main_py = open('main.py', encoding='utf-8').read()
+    assert "elif args.mode == 'testnet':" in main_py
+    assert "os.environ['APP_ENV'] = 'testnet'" in main_py
+    assert "os.environ['APP_ENV'] = 'local'\n    elif args.mode == 'live'" not in main_py

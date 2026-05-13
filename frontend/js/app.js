@@ -1,4 +1,4 @@
-import { api } from './api_client.js';
+import { api, getReadApiKey, setReadApiKey, clearReadApiKey } from './api_client.js';
 import { installContextHelp } from './context_help.js';
 
 const $ = (id) => document.getElementById(id);
@@ -16,6 +16,38 @@ function pretty(data) {
 
 function badge(text, level = 'info') {
   return `<span class="badge ${escapeHtml(level)}">${escapeHtml(text)}</span>`;
+}
+
+function renderAuthStatus(message, level = 'info') {
+  const box = $('authStatus');
+  if (!box) return;
+  box.className = `auth-status ${level}`;
+  box.textContent = message;
+}
+
+function initReadonlyKeyControls() {
+  const input = $('readonlyApiKey');
+  const saveBtn = $('saveReadonlyKeyBtn');
+  const clearBtn = $('clearReadonlyKeyBtn');
+  if (!input || !saveBtn || !clearBtn) return;
+  input.value = getReadApiKey();
+  renderAuthStatus(input.value ? 'Ключ чтения сохранен на текущую сессию браузера.' : 'Для APP_ENV=testnet/prod укажите READONLY_API_KEY из .env.', input.value ? 'ok' : 'info');
+  saveBtn.addEventListener('click', async () => {
+    const key = setReadApiKey(input.value);
+    renderAuthStatus(key ? 'Ключ чтения применен. Обновляю панель...' : 'Ключ чтения очищен.', key ? 'ok' : 'warning');
+    try {
+      await loadAll();
+      await loadCommands();
+      renderAuthStatus('Панель успешно загружена с READONLY_API_KEY.', 'ok');
+    } catch (err) {
+      renderAuthStatus(err.message, 'error');
+    }
+  });
+  clearBtn.addEventListener('click', () => {
+    clearReadApiKey();
+    input.value = '';
+    renderAuthStatus('Ключ чтения удален из текущей сессии браузера.', 'warning');
+  });
 }
 
 function setHero(hero) {
@@ -232,6 +264,15 @@ async function runOperatorCommand(commandId) {
   if (commandId === 'bootstrap_db') {
     options.seed_demo = $('seedDemoData').checked;
   }
+  // Для polling результата command-run read endpoint тоже требует x-api-key в APP_ENV=testnet/prod.
+  // OPERATOR_API_KEY обладает правом чтения, поэтому временно используем его как ключ чтения сессии,
+  // если READONLY_API_KEY еще не был введен отдельно.
+  if (!getReadApiKey()) {
+    setReadApiKey(key);
+    const readInput = $('readonlyApiKey');
+    if (readInput) readInput.value = key;
+    renderAuthStatus('Для текущей сессии используется OPERATOR_API_KEY как ключ чтения. Лучше указать отдельный READONLY_API_KEY.', 'warning');
+  }
   try {
     resultBox.className = 'job-output';
     resultBox.textContent = 'Команда отправлена на сервер...';
@@ -313,6 +354,12 @@ async function submitSafeAction(action) {
     resultBox.textContent = 'Нужны OPERATOR_API_KEY и причина действия. Без причины backend не примет команду.';
     return;
   }
+  if (!getReadApiKey()) {
+    setReadApiKey(key);
+    const readInput = $('readonlyApiKey');
+    if (readInput) readInput.value = key;
+    renderAuthStatus('Для текущей сессии используется OPERATOR_API_KEY как ключ чтения. Лучше указать отдельный READONLY_API_KEY.', 'warning');
+  }
   try {
     const result = await api('/api/actions', {
       method: 'POST',
@@ -353,7 +400,13 @@ installContextHelp({
 });
 
 function showFatal(err) {
-  document.body.insertAdjacentHTML('beforeend', `<div class="callout error" style="margin:20px">${escapeHtml(err.message)}</div>`);
+  renderAuthStatus(err.message, 'error');
+  const existing = $('startupError');
+  if (existing) {
+    existing.className = 'callout error';
+    existing.textContent = err.message;
+  }
 }
 
+initReadonlyKeyControls();
 loadAll().then(loadCommands).catch(showFatal);
