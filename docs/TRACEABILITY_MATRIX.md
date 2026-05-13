@@ -29,3 +29,4 @@
 | Manual config activation не может повысить риск | `app/api/routes/actions.py` | `tests/test_manual_actions_safety.py` |
 
 | DB hard invariants закрывают direct SQL bypass | `migrations/0003_hard_invariants.sql`, `scripts/bootstrap_db.sh`, `scripts/check_migrations_static.py` | `tests/test_migration_hard_invariants_static.py`, `python main.py validate` |
+| Runtime specs/market snapshot не могут быть нулевыми или отрицательными | `app/risk_engine/approval.py`, `migrations/0001_core_schema.sql`, `migrations/0005_positive_runtime_specs.sql`, `app/config/validator.py` | `tests/test_risk_engine.py::test_zero_min_qty_and_min_notional_fail_closed`, `tests/test_risk_engine.py::test_invalid_market_snapshot_fail_closed_before_cost_model_can_help`, `tests/test_config_validator.py::test_negative_cost_or_liquidity_parameters_are_rejected`, `scripts/check_migrations_static.py` |

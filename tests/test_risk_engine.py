@@ -131,3 +131,29 @@ def test_beta_adjusted_exposure_cap_defaults_to_effective_leverage_cap():
     rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0, max_effective_leverage=3.0))
     assert not rd.approved
     assert 'beta_adjusted_exposure_cap' in rd.reasons
+
+
+def test_zero_min_qty_and_min_notional_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    specs.min_qty = 0
+    specs.min_notional = 0
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_instrument_specs' in rd.reasons
+
+
+def test_invalid_market_snapshot_fail_closed_before_cost_model_can_help():
+    signal, ml, account, market, specs = base_objects()
+    market.ask1 = market.bid1 - 1
+    market.spread_bps = -1
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_market_snapshot' in rd.reasons
+
+
+def test_zero_account_equity_rejected_fail_closed():
+    signal, ml, account, market, specs = base_objects()
+    account.equity_usdt = 0
+    rd = approve_signal(signal, ml, account, market, specs, RiskConfig(min_net_edge_bps=0))
+    assert not rd.approved
+    assert 'invalid_account_equity' in rd.reasons

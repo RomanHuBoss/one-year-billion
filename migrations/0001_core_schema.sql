@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS instruments (
     fetched_at TIMESTAMPTZ NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT instruments_linear_only CHECK (category = 'linear'),
-    CONSTRAINT instruments_positive_specs CHECK (tick_size > 0 AND qty_step > 0 AND min_qty >= 0 AND min_notional >= 0)
+    CONSTRAINT instruments_positive_specs CHECK (tick_size > 0 AND qty_step > 0 AND min_qty > 0 AND min_notional > 0 AND max_leverage > 0)
 );
 CREATE INDEX IF NOT EXISTS idx_instruments_symbol_expires ON instruments(symbol, expires_at DESC);
 

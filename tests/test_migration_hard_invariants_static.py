@@ -17,6 +17,9 @@ def test_db_hard_invariants_cover_risk_signal_order_lineage():
         'risk_decision feature_hash mismatch',
         'order qty exceeds approved risk sizing',
         'order notional exceeds approved risk sizing',
+        'min_qty > 0',
+        'min_notional > 0',
+        'max_leverage > 0',
     ]:
         assert token in sql
 

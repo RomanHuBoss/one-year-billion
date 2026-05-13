@@ -34,3 +34,10 @@ def _valid_cfg(live_strategies):
 def test_forbidden_strategy_names_are_case_insensitive():
     with pytest.raises(ConfigValidationError, match='forbidden_strategy_in_live_permissions'):
         validate_config(_valid_cfg(['DCA']))
+
+
+def test_negative_cost_or_liquidity_parameters_are_rejected():
+    cfg = _valid_cfg(['breakout'])
+    cfg['risk.yaml']['slippage_buffer_bps'] = -0.01
+    with pytest.raises(ConfigValidationError, match='slippage_buffer_bps_must_be_nonnegative'):
+        validate_config(cfg)

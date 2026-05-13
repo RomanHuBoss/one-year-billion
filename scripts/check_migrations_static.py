@@ -26,6 +26,9 @@ def main() -> int:
         'AS severity',
         'AS allowed_actions',
         'AS updated_at',
+        'min_qty > 0',
+        'min_notional > 0',
+        'max_leverage > 0',
     ]
     for token in required:
         if token not in sql:

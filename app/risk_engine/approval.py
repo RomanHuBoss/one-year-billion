@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+import math
 from datetime import timedelta
 from uuid import uuid4
 from app.core.time import utc_now
@@ -52,7 +53,27 @@ def approve_signal(
     fail_if(not market.funding_fresh, 'stale_funding')
     fail_if(signal.symbol.upper() != market.symbol.upper() or signal.symbol.upper() != specs.symbol.upper(), 'symbol_runtime_mismatch')
     fail_if(not specs.fresh or specs.category != 'linear' or specs.status != 'Trading', 'bad_instrument_specs')
-    fail_if(specs.tick_size <= 0 or specs.qty_step <= 0 or specs.min_qty < 0 or specs.min_notional < 0 or specs.max_leverage <= 0, 'invalid_instrument_specs')
+    numeric_specs = (specs.tick_size, specs.qty_step, specs.min_qty, specs.min_notional, specs.max_leverage)
+    fail_if(
+        any(not math.isfinite(float(x)) for x in numeric_specs)
+        or specs.tick_size <= 0
+        or specs.qty_step <= 0
+        or specs.min_qty <= 0
+        or specs.min_notional <= 0
+        or specs.max_leverage <= 0,
+        'invalid_instrument_specs',
+    )
+    fail_if(
+        any(not math.isfinite(float(x)) for x in (market.bid1, market.ask1, market.spread_bps, market.depth_usdt, market.funding_bps))
+        or market.bid1 <= 0
+        or market.ask1 <= 0
+        or market.ask1 < market.bid1
+        or market.spread_bps < 0
+        or market.depth_usdt < 0,
+        'invalid_market_snapshot',
+    )
+    fail_if(not math.isfinite(float(account.equity_usdt)) or account.equity_usdt <= 0, 'invalid_account_equity')
+    fail_if(not math.isfinite(float(account.available_balance_usdt)) or account.available_balance_usdt < 0, 'invalid_account_balance')
     # Сигнал не может попасть в sizing без stop, invalidator, evidence и feature_hash.
     fail_if(signal.stop_price is None or not signal.invalidator, 'missing_stop_or_invalidator')
     fail_if(not signal.feature_hash, 'missing_feature_hash')

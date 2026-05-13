@@ -31,6 +31,15 @@ def validate_config(cfg: dict[str, Any]) -> list[str]:
         reasons.append('leverage_default_above_absolute_max')
     if float(risk.get('min_net_edge_bps', 0)) <= 0:
         reasons.append('min_net_edge_must_be_positive')
+    for field in (
+        'maker_fee_bps', 'taker_fee_bps', 'slippage_buffer_bps',
+        'funding_buffer_bps', 'safety_buffer_bps', 'max_spread_bps',
+        'min_depth_usdt', 'reserve_cash_pct', 'min_liq_distance_pct',
+    ):
+        if field in risk and float(risk.get(field, 0)) < 0:
+            reasons.append(f'{field}_must_be_nonnegative')
+    if float(risk.get('max_effective_leverage', 0)) <= 0:
+        reasons.append('max_effective_leverage_must_be_positive')
     live = {str(x).lower() for x in account.get('live_strategies', [])}
     if live & FORBIDDEN_TERMS:
         reasons.append('forbidden_strategy_in_live_permissions')

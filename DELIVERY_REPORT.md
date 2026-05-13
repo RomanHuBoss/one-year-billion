@@ -349,3 +349,54 @@ architecture checks: PASS
 migration checks: PASS
 secret scan: PASS
 ```
+
+---
+
+## Редакция 8.0 — дополнительная hardening-проверка runtime specs / market snapshot
+
+Дата проверки: 2026-05-13.
+
+### Найденные и исправленные дефекты
+
+1. `app/risk_engine/approval.py`: runtime specs теперь fail-closed требуют строго положительные `tick_size`, `qty_step`, `min_qty`, `min_notional`, `max_leverage` и конечные числовые значения. Нулевые `min_qty`/`min_notional` больше не проходят как технически допустимые.
+2. `app/risk_engine/approval.py`: добавлен hard-gate `invalid_market_snapshot` для некорректного top-of-book (`bid1 <= 0`, `ask1 <= 0`, `ask1 < bid1`, отрицательный spread/depth, NaN/inf). Это закрывает возможность получить искусственно завышенный `expected_net_edge_bps` из-за отрицательного spread.
+3. `app/risk_engine/approval.py`: добавлены проверки `invalid_account_equity` и `invalid_account_balance`, чтобы sizing не мог рассчитываться при нулевом/некорректном equity или отрицательном available balance.
+4. `app/config/validator.py`: отрицательные значения costs/liquidity/risk-параметров (`slippage_buffer_bps`, `safety_buffer_bps`, `max_spread_bps`, `min_depth_usdt`, `reserve_cash_pct`, `min_liq_distance_pct` и др.) теперь отклоняются на старте конфигурации.
+5. `migrations/0001_core_schema.sql` и новая `migrations/0005_positive_runtime_specs.sql`: DB-level constraint `instruments_positive_specs` теперь требует `min_qty > 0`, `min_notional > 0`, `max_leverage > 0` для новых и уже существующих БД.
+
+### Измененные файлы редакции 8.0
+
+- `app/risk_engine/approval.py`
+- `app/config/validator.py`
+- `migrations/0001_core_schema.sql`
+- `migrations/0005_positive_runtime_specs.sql`
+- `scripts/check_migrations_static.py`
+- `tests/test_risk_engine.py`
+- `tests/test_config_validator.py`
+- `tests/test_migration_hard_invariants_static.py`
+- `TOTAL_PROJECT_CHECK_REPORT.md`
+- `DELIVERY_REPORT.md`
+- `docs/TRACEABILITY_MATRIX.md`
+- `docs/GO_NO_GO.md`
+
+### Проверки редакции 8.0
+
+```text
+python main.py validate
+compileall: PASS
+pytest: 103 passed, 1 warning
+scripts/check_strategy_imports.py: PASS
+scripts/check_architecture.py: PASS
+scripts/check_migrations_static.py: PASS
+scripts/secret_scan.py: PASS
+
+python main.py --help: PASS
+python main.py serve --help: PASS
+python main.py preflight --mode testnet: blocked fail-closed без PostgreSQL/Bybit keys
+python main.py preflight --mode live: blocked fail-closed без PostgreSQL/Bybit keys/Go-No-Go evidence
+```
+
+### Итог редакции 8.0
+
+Статус проекта: `test-ready`; `paper-ready` после подключения PostgreSQL и runtime data; `technical-live-ready` как live-gated кодовая база; фактический live остается `live-blocked` до внешних gates.
+
