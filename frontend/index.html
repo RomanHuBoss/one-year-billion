@@ -3,88 +3,127 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Мастер запуска · Crypto Acceleration System 2026</title>
-  <link rel="stylesheet" href="/css/styles.css?v=operator-workflow-20260514-2" />
+  <title>Операторский модуль · Crypto Acceleration System 2026</title>
+  <link rel="stylesheet" href="/css/styles.css?v=operator-cockpit-20260515" />
 </head>
 <body>
+  <div class="app-bg" aria-hidden="true"></div>
+
   <header class="app-header">
-    <div class="brand">
+    <div class="brand" data-help="hero">
       <div class="brand-mark">CAS</div>
-      <div>
-        <h1>Мастер запуска</h1>
-        <p>Один экран вместо консольных инструкций: шаги, подшаги, evidence и проверки идут строго сверху вниз. Правая кнопка по любому блоку → «Вызвать справку».</p>
+      <div class="brand-copy">
+        <p class="eyebrow">Crypto Acceleration System 2026</p>
+        <h1>Операторский модуль</h1>
+        <p>Современная страница оператора: workflow, Панель допуска, Что мешает запуску, Безопасные действия оператора и backend status_effective. Правая кнопка по любому блоку → «Вызвать справку».</p>
       </div>
     </div>
+
     <div class="header-actions">
-      <label class="top-key-label" title="Ключ backend: OPERATOR_API_KEY или READONLY_API_KEY из .env. Не вводите сюда ключ Bybit.">
-        <span>API-доступ</span>
+      <label class="top-key-label" title="Это backend API key: OPERATOR_API_KEY или READONLY_API_KEY. Не вводите сюда Bybit API key.">
+        <span>Backend API-доступ</span>
         <input id="topApiKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY / READONLY_API_KEY" />
       </label>
       <span id="topStatus" class="status-pill neutral">загрузка</span>
-      <button id="globalHelpBtn" class="btn help">Справка</button>
+      <button id="globalHelpBtn" class="btn soft">Справка</button>
       <button id="refreshBtn" class="btn primary">Обновить</button>
     </div>
   </header>
 
-  <main class="shell workflow-shell">
+  <main class="shell">
     <section id="hero" class="hero-card loading" data-help="hero">
-      <div>
-        <p class="eyebrow">Операторский сценарий</p>
-        <h2 id="heroTitle">Загрузка workflow...</h2>
-        <p id="heroMessage" class="hero-message">Получаем серверный план запуска.</p>
-      </div>
-      <div class="hero-next">
-        <span>Следующий шаг</span>
-        <strong id="nextStep">подождать</strong>
-        <div class="hero-actions">
-          <button id="runNextBtn" class="btn secondary">Выполнить следующий доступный шаг</button>
-          <button id="toggleDiagBtn" class="btn ghost">Диагностика</button>
+      <div class="hero-content">
+        <p class="eyebrow">Операторский cockpit</p>
+        <h2 id="heroTitle">Загрузка состояния</h2>
+        <p id="heroMessage" class="hero-message">Получаем workflow и статусы с backend.</p>
+        <div class="hero-metrics" aria-label="Краткие показатели workflow">
+          <div class="hero-metric"><span>PASS</span><strong id="metricPass">—</strong></div>
+          <div class="hero-metric"><span>Закрыто</span><strong id="metricLocked">—</strong></div>
+          <div class="hero-metric"><span>Блок</span><strong id="metricBlocked">—</strong></div>
         </div>
       </div>
+
+      <aside class="action-cockpit" data-help="actions">
+        <div class="next-step-card">
+          <span>Следующий gate</span>
+          <strong id="nextStep">подождать</strong>
+        </div>
+        <label>
+          <span>Причина действия для audit trail</span>
+          <input id="workflowReason" type="text" autocomplete="off" value="операторский запуск шага из мастера" />
+        </label>
+        <label>
+          <span>Утверждающий, если нужен Go/No-Go</span>
+          <input id="workflowApprovedBy" type="text" autocomplete="off" placeholder="approved_by" />
+        </label>
+        <div class="hero-actions">
+          <button id="runNextBtn" class="btn accent">Выполнить следующий доступный шаг</button>
+          <button id="toggleDiagBtn" class="btn ghost">Диагностика</button>
+        </div>
+      </aside>
     </section>
 
-    <section class="panel workflow-panel" data-help="steps">
+    <section class="panel" data-help="readiness">
       <div class="panel-heading horizontal">
         <div>
-          <h2>Крупные вехи запуска</h2>
-          <p>Шаг считается завершенным только когда завершены все его обязательные подшаги. Заблокированные шаги нельзя обойти из frontend.</p>
+          <p class="eyebrow">Readiness</p>
+          <h2>Панель допуска</h2>
+          <p>Короткая сводка backend-gates. Frontend не считает риск, плечо, qty или торговый статус.</p>
         </div>
         <div id="workflowSummary" class="workflow-summary">—</div>
       </div>
-      <div id="workflowSteps" class="workflow-steps"></div>
+      <div id="cardsGrid" class="cards-grid"></div>
     </section>
 
-    <section class="operations-grid" data-help="actions">
-      <article class="panel">
-        <div class="panel-heading">
-          <h2>Что сейчас можно делать</h2>
-          <p>Панель показывает только безопасные действия, разрешенные backend.</p>
-        </div>
-        <div id="nextActions" class="next-actions"></div>
-      </article>
-
-      <article class="panel">
-        <div class="panel-heading">
-          <h2>Инварианты, которые нельзя обойти</h2>
-          <p>Frontend не источник истины и не управляет риском.</p>
-        </div>
-        <ul id="invariants" class="invariant-list"></ul>
-      </article>
-    </section>
-
-    <section class="symbols-layout compact-symbols">
-      <article class="panel symbols-panel">
+    <section class="grid-two main-grid">
+      <article class="panel workflow-panel" data-help="steps">
         <div class="panel-heading horizontal">
           <div>
+            <p class="eyebrow">Workflow</p>
+            <h2>Крупные вехи запуска</h2>
+            <p>Все шаги идут строго сверху вниз. Заблокированные gate нельзя обойти через страницу.</p>
+          </div>
+        </div>
+        <div id="workflowSteps" class="workflow-steps"></div>
+      </article>
+
+      <aside class="side-stack">
+        <section class="panel blockers-panel" data-help="blockers">
+          <div class="panel-heading">
+            <p class="eyebrow">Fail-closed</p>
+            <h2>Что мешает запуску</h2>
+            <p>Причины берутся из backend runtime/preflight. `blocked` — штатное безопасное состояние.</p>
+          </div>
+          <div id="blockersList" class="blocker-list"></div>
+        </section>
+
+        <section class="panel command-panel" data-help="commands">
+          <div class="panel-heading">
+            <p class="eyebrow">Операционный центр</p>
+            <h2>Следующее действие</h2>
+            <p>Команды запускаются только через backend allowlist, без произвольного shell-доступа браузера.</p>
+          </div>
+          <div id="nextActions" class="next-actions"></div>
+          <div id="commandMatrix" class="command-matrix"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="grid-two symbols-grid">
+      <article class="panel symbols-panel" data-help="symbols">
+        <div class="panel-heading horizontal">
+          <div>
+            <p class="eyebrow">Symbols</p>
             <h2>Символы</h2>
-            <p>Статусы берутся из backend status_effective. Браузер их не рассчитывает.</p>
+            <p>Единый источник статуса — backend `status_effective`. Таблица и карточка используют одни данные.</p>
           </div>
         </div>
         <div id="symbols" class="symbol-list"></div>
       </article>
 
-      <aside class="panel symbol-details">
+      <aside class="panel symbol-details" data-help="symbol-details">
         <div class="panel-heading">
+          <p class="eyebrow">Traceability</p>
           <h2>Детали символа</h2>
           <p>Причины, trace_id и разрешенные safe-actions.</p>
         </div>
@@ -92,17 +131,46 @@
       </aside>
     </section>
 
-    <section class="panel">
+    <section class="grid-two ops-grid">
+      <article class="panel" data-help="safe-actions">
+        <div class="panel-heading">
+          <p class="eyebrow">Safe actions</p>
+          <h2>Безопасные действия оператора</h2>
+          <p>Разрешены только действия, которые снижают риск или не увеличивают exposure.</p>
+        </div>
+        <div id="safeActionsList" class="safe-actions"></div>
+      </article>
+
+      <article class="panel" data-help="invariants">
+        <div class="panel-heading">
+          <p class="eyebrow">Hard gates</p>
+          <h2>Инварианты, которые нельзя обойти</h2>
+          <p>Они enforced backend/DB/execution-контуром, а не внешним видом страницы.</p>
+        </div>
+        <ul id="invariants" class="invariant-list"></ul>
+      </article>
+    </section>
+
+    <section class="panel result-panel" data-help="result">
       <div class="panel-heading horizontal">
         <div>
+          <p class="eyebrow">Result</p>
           <h2>Результат последнего действия</h2>
-          <p>Команды, evidence-записи и paper-прогоны запускаются из панели; терминал не нужен для штатной работы.</p>
+          <p>Здесь показываются stdout/stderr, blocked-reasons, traceback и подсказки по Bybit diagnostics.</p>
         </div>
         <button id="copyDiagBtn" class="btn ghost">Копировать диагностику</button>
       </div>
       <div id="actionResult" class="job-output empty-state">Действия еще не запускались.</div>
     </section>
 
+    <section id="diagnostics" class="panel diagnostics hidden" data-help="diagnostics">
+      <div class="panel-heading">
+        <p class="eyebrow">Diagnostics</p>
+        <h2>Техническая диагностика</h2>
+        <p>Полезно для администратора или передачи разработчику.</p>
+      </div>
+      <pre id="diagnosticJson">{}</pre>
+    </section>
 
     <div id="legacyDomCompatibility" hidden aria-hidden="true">
       <div id="operatorJobResult"></div><div id="cards"></div><div id="blockers"></div><div id="limits"></div><div id="steps"></div><div id="safeActions"></div><div id="paperSummary"></div>
@@ -110,17 +178,9 @@
       <button id="runPaperBtn"></button><button id="copyJsonBtn"></button><button id="toggleDiagnosticsBtn"></button>
     </div>
 
-    <div class="sr-only" aria-hidden="true">Операторский модуль · Панель допуска · Что мешает запуску · Безопасные действия оператора · Операционный центр · python scripts/bootstrap_db.py · status_effective</div>
-
-    <section id="diagnostics" class="panel diagnostics hidden">
-      <div class="panel-heading">
-        <h2>Техническая диагностика</h2>
-        <p>Нужна только для администратора или передачи разработчику.</p>
-      </div>
-      <pre id="diagnosticJson">{}</pre>
-    </section>
+    <div class="sr-only" aria-hidden="true">Операторский модуль · Панель допуска · Что мешает запуску · Безопасные действия оператора · Операционный центр · python scripts/bootstrap_db.py · status_effective · Крупные вехи запуска</div>
   </main>
 
-  <script type="module" src="/js/app.js?v=operator-workflow-20260514-2"></script>
+  <script type="module" src="/js/app.js?v=operator-cockpit-20260515"></script>
 </body>
 </html>

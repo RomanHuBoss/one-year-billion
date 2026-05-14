@@ -22,7 +22,14 @@
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
-Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `116 passed`.
+Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `133 passed`.
+
+
+## Актуальная редакция после тотальной проверки
+
+Последняя локальная проверка архива выполнена командой `python main.py validate`: `133 passed`, static architecture/import/migration checks PASS, secret scan PASS. `python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице ожидаемо возвращают `blocked` из-за отсутствия внешней PostgreSQL, Bybit credentials и Go/No-Go evidence; это корректное fail-closed поведение.
+
+Документация очищена от служебных отчетных Markdown-файлов. В проекте оставлены только рабочие README и нормативные safety-документы, требуемые specification/roadmap: `README.md`, `README_for_developers.md`, `docs/RUNBOOK.md`, `docs/TRACEABILITY_MATRIX.md`, `docs/GO_NO_GO.md`, а также единое руководство оператора `docs/OPERATOR_MANUAL.docx`.
 
 ## Быстрый запуск из командной строки
 
@@ -110,7 +117,7 @@ python main.py
 
 Dashboard / операторский модуль: `http://127.0.0.1:8000/`
 
-Операторский модуль показывает крупный статус, причины блокировки, операционный центр для allowlisted Python-команд, план перехода к live, безопасные действия и символы без сырого JSON. Подробное руководство: `docs/OPERATOR_MANUAL.md` и `docs/OPERATOR_MANUAL.docx`.
+Операторский модуль показывает крупный статус, причины блокировки, операционный центр для allowlisted Python-команд, план перехода к live, безопасные действия и символы без сырого JSON. Подробное руководство: `docs/OPERATOR_MANUAL.docx`.
 
 OpenAPI: `http://127.0.0.1:8000/docs`
 
@@ -208,7 +215,7 @@ DB-backed evidence обязательно. Env-флаги сами по себе
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":116}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":133}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by "<product-owner>"
 ```
 
@@ -315,4 +322,4 @@ main.py               единая CLI-точка запуска
 
 Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
 
-Подробно: `docs/OPERATOR_WORKFLOW.md`.
+Подробности по операторскому процессу включены в `docs/OPERATOR_MANUAL.docx` и `docs/RUNBOOK.md`.

@@ -138,7 +138,7 @@ python main.py preflight --mode testnet
 python scripts/record_go_no_go_evidence.py --type PHASE0_PAPER --status PASS --started-at 2026-05-01T00:00:00Z --ended-at 2026-05-15T00:00:00Z --metrics-json '{"reconciliation_pass_rate":1.0,"unresolved_incidents":0}'
 python scripts/record_go_no_go_evidence.py --type RECONCILIATION --status PASS --metrics-json '{"pass_rate":1.0}'
 python scripts/record_go_no_go_evidence.py --type SECURITY --status PASS --metrics-json '{"secret_scan":"PASS"}'
-python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":112}'
+python scripts/record_go_no_go_evidence.py --type CI --status PASS --metrics-json '{"tests":133}'
 python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --approved-by <product-owner>
 ```
 
@@ -192,4 +192,4 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 
 Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
 
-Подробно: `docs/OPERATOR_WORKFLOW.md`.
+Подробности по операторскому процессу включены в `docs/OPERATOR_MANUAL.docx` и `docs/RUNBOOK.md`.
