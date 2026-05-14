@@ -78,3 +78,14 @@ def test_workflow_db_step_turns_ok_after_lazy_schema_refresh(monkeypatch):
         app.state.repository = old_repo
         app.state.db_available = old_db_available
         app.state.db_schema_ready = old_db_schema_ready
+
+
+def test_frontend_job_result_surfaces_operator_hints_for_bybit_time_window():
+    js = open('frontend/js/app.js', encoding='utf-8').read()
+    css = open('frontend/css/styles.css', encoding='utf-8').read()
+    help_js = open('frontend/js/context_help.js', encoding='utf-8').read()
+    assert 'renderJobOperatorHints' in js
+    assert 'bybit_timestamp_window_error' in js
+    assert 'это timestamp/recv_window gate Bybit' in js
+    assert 'job-hints' in css
+    assert 'bybit_timestamp_window_error_10002' in help_js

@@ -42,6 +42,23 @@ function escapeHtml(value) {
 
 function pretty(data) { return JSON.stringify(data, null, 2); }
 
+function parseJsonMaybe(text) {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch (_) { return null; }
+}
+
+function renderJobOperatorHints(parsed) {
+  const hints = parsed?.data?.operator_private_api_hint || parsed?.operator_private_api_hint || [];
+  const timeSync = parsed?.data?.bybit_time_sync || parsed?.bybit_time_sync || null;
+  const privateErrors = parsed?.data?.bybit_private_errors || parsed?.bybit_private_errors || [];
+  const hasTimestampError = privateErrors.some(err => String(err.ret_code) === '10002' || err.code === 'bybit_timestamp_window_error');
+  if (!hints.length && !timeSync && !hasTimestampError) return '';
+  const hintItems = hints.map(h => `<li>${escapeHtml(h)}</li>`).join('');
+  const syncText = timeSync ? `<p><strong>Синхронизация Bybit time:</strong> offset=${escapeHtml(timeSync.server_time_offset_ms ?? '—')} мс, recv_window=${escapeHtml(timeSync.recv_window_ms ?? '—')} мс, safety=${escapeHtml(timeSync.time_safety_margin_ms ?? '—')} мс.</p>` : '';
+  const timestampText = hasTimestampError ? '<p><strong>Диагноз:</strong> это timestamp/recv_window gate Bybit, не признак испорченного API key.</p>' : '';
+  return `<div class="job-hints"><h4>Что делать оператору</h4>${timestampText}${syncText}<ul>${hintItems}</ul></div>`;
+}
+
 function badge(text, level = 'info') {
   return `<span class="badge ${escapeHtml(level)}">${escapeHtml(text)}</span>`;
 }
@@ -205,13 +222,15 @@ function renderResult(payload) {
 
 function renderJob(job) {
   const level = job.status === 'ok' ? 'ok' : ['blocked', 'timeout', 'error'].includes(job.status) ? 'error' : '';
+  const parsedStdout = parseJsonMaybe(job.stdout);
+  const hints = renderJobOperatorHints(parsedStdout);
   const stdout = job.stdout ? `<h4>stdout</h4><pre>${escapeHtml(job.stdout)}</pre>` : '';
   const stderr = job.stderr ? `<h4>stderr</h4><pre>${escapeHtml(job.stderr)}</pre>` : '';
   const error = job.error ? `<p class="job-error">${escapeHtml(job.error)}</p>` : '';
   $('actionResult').className = `job-output ${level}`;
   $('actionResult').innerHTML = `<div class="job-head"><strong>${escapeHtml(job.title || job.command_id)}</strong>${badge(job.status, job.status === 'ok' ? 'ok' : job.status === 'running' || job.status === 'queued' ? 'info' : 'danger')}</div>
     <p><strong>Команда:</strong> <code>${escapeHtml(job.command_display || '')}</code></p>
-    <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>${error}${stdout}${stderr}`;
+    <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>${error}${hints}${stdout}${stderr}`;
 }
 
 async function pollJob(jobId) {

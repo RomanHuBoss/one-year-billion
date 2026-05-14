@@ -14,12 +14,23 @@ class BybitAPIError(RuntimeError):
     оператор видел причину блокировки вместо общего RuntimeError.
     """
 
-    def __init__(self, code: str, message: str = '', *, ret_code: Any = None, ret_msg: str | None = None, path: str | None = None, http_status: int | None = None):
+    def __init__(
+        self,
+        code: str,
+        message: str = '',
+        *,
+        ret_code: Any = None,
+        ret_msg: str | None = None,
+        path: str | None = None,
+        http_status: int | None = None,
+        details: dict[str, Any] | None = None,
+    ):
         self.code = code
         self.ret_code = ret_code
         self.ret_msg = ret_msg or message
         self.path = path
         self.http_status = http_status
+        self.details = details or {}
         parts = [code]
         if ret_code is not None:
             parts.append(str(ret_code))
@@ -39,13 +50,16 @@ class BybitAPIError(RuntimeError):
         return self.code
 
     def safe_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             'code': self.code,
             'ret_code': self.ret_code,
             'ret_msg': self.ret_msg,
             'path': self.path,
             'http_status': self.http_status,
         }
+        if self.details:
+            data['details'] = self.details
+        return data
 
 
 @dataclass(frozen=True)
@@ -55,6 +69,10 @@ class BybitConfig:
     testnet: bool = True
     trading_enabled: bool = False
     live_confirm: bool = False
+    recv_window_ms: int = 8000
+    time_sync_ttl_sec: int = 60
+    time_safety_margin_ms: int = 250
+    auto_time_sync: bool = True
 
     @property
     def base_url(self) -> str:
@@ -68,19 +86,108 @@ class BybitAdapter:
         self.cfg = cfg
         self.limiter = limiter or TokenBucketRateLimiter()
         self.degraded_reason: str | None = None
+        self._server_time_offset_ms: int | None = None
+        self._server_time_synced_at_ms: int | None = None
+        self._last_server_time_ms: int | None = None
+        self._last_time_sync_error: str | None = None
 
     def _guard_rate_limit(self) -> None:
         if not self.limiter.allow():
             self.degraded_reason = 'local_rate_limiter_open'
             raise BybitAPIError('exchange_degraded', 'local_rate_limiter_open')
 
+    @staticmethod
+    def _local_time_ms() -> int:
+        return int(time.time() * 1000)
+
+    @staticmethod
+    def _extract_server_time_ms(payload: dict[str, Any]) -> int | None:
+        """Достает Bybit server time из V5 `/v5/market/time` без предположений о форме ответа.
+
+        Bybit обычно возвращает `time` на верхнем уровне и `result.timeNano`.
+        В тестах/старых SDK может быть только одно из этих полей. Если timestamp
+        не распознан, private request не должен молча считаться синхронизированным.
+        """
+
+        candidates = [
+            payload.get('time'),
+            (payload.get('result') or {}).get('timeNano'),
+            (payload.get('result') or {}).get('timeSecond'),
+            payload.get('time_now'),
+        ]
+        for raw in candidates:
+            if raw is None:
+                continue
+            try:
+                text = str(raw)
+                # timeNano приходит в наносекундах; timeSecond — в секундах.
+                if len(text.split('.')[0]) >= 18:
+                    return int(int(float(text)) / 1_000_000)
+                if len(text.split('.')[0]) <= 10:
+                    return int(float(text) * 1000)
+                return int(float(text))
+            except (TypeError, ValueError, OverflowError):
+                continue
+        return None
+
+    def sync_time(self) -> dict[str, Any]:
+        """Синхронизирует подпись private API с Bybit server time.
+
+        Bybit требует, чтобы timestamp лежал в окне
+        `server_time - recv_window <= timestamp < server_time + 1000`.
+        Поэтому `recv_window` не спасает, если локальные часы убежали вперед
+        больше чем на 1 секунду. Мы используем смещение относительно серверного
+        времени и небольшой safety margin, чтобы не получать retCode=10002.
+        """
+
+        local_before = self._local_time_ms()
+        payload = self._public_get('/v5/market/time')
+        local_after = self._local_time_ms()
+        server_ms = self._extract_server_time_ms(payload)
+        if server_ms is None:
+            self._last_time_sync_error = 'server_time_not_parseable'
+            raise BybitAPIError('bybit_time_sync_failed', 'server_time_not_parseable', path='/v5/market/time')
+        midpoint = int((local_before + local_after) / 2)
+        self._server_time_offset_ms = server_ms - midpoint
+        self._server_time_synced_at_ms = local_after
+        self._last_server_time_ms = server_ms
+        self._last_time_sync_error = None
+        return payload
+
+    def _ensure_time_sync(self) -> None:
+        if not self.cfg.auto_time_sync:
+            return
+        now_ms = self._local_time_ms()
+        ttl_ms = max(1, int(self.cfg.time_sync_ttl_sec)) * 1000
+        if self._server_time_offset_ms is None or self._server_time_synced_at_ms is None or now_ms - self._server_time_synced_at_ms > ttl_ms:
+            self.sync_time()
+
+    def _timestamp_for_private_ms(self) -> int:
+        self._ensure_time_sync()
+        base = self._local_time_ms()
+        if self._server_time_offset_ms is not None:
+            base += self._server_time_offset_ms
+        # Safety margin нужен именно против верхней границы server_time + 1000.
+        return base - max(0, int(self.cfg.time_safety_margin_ms))
+
+    def time_sync_status(self) -> dict[str, Any]:
+        return {
+            'enabled': bool(self.cfg.auto_time_sync),
+            'server_time_offset_ms': self._server_time_offset_ms,
+            'synced_at_local_ms': self._server_time_synced_at_ms,
+            'last_server_time_ms': self._last_server_time_ms,
+            'recv_window_ms': int(self.cfg.recv_window_ms),
+            'time_safety_margin_ms': int(self.cfg.time_safety_margin_ms),
+            'last_error': self._last_time_sync_error,
+        }
+
     def _sign(self, timestamp: str, recv_window: str, payload: str) -> str:
         raw = f'{timestamp}{self.cfg.api_key}{recv_window}{payload}'
         return hmac.new(self.cfg.api_secret.encode(), raw.encode(), hashlib.sha256).hexdigest()
 
     def _headers(self, payload: str) -> dict[str, str]:
-        ts = str(int(time.time() * 1000))
-        recv = '5000'
+        ts = str(self._timestamp_for_private_ms())
+        recv = str(int(self.cfg.recv_window_ms))
         return {
             'X-BAPI-API-KEY': self.cfg.api_key,
             'X-BAPI-TIMESTAMP': ts,
@@ -138,7 +245,13 @@ class BybitAdapter:
         ret_code = payload.get('retCode')
         if ret_code not in (0, '0', None):
             message = payload.get('retMsg', 'unknown')
-            raise BybitAPIError('bybit_request_rejected', message, ret_code=ret_code, ret_msg=message, path=path)
+            code = 'bybit_request_rejected'
+            details: dict[str, Any] = {}
+            if str(ret_code) == '10002' or 'recv_window' in str(message).lower() or 'timestamp' in str(message).lower():
+                code = 'bybit_timestamp_window_error'
+                details = self.time_sync_status()
+                self._last_time_sync_error = str(message)
+            raise BybitAPIError(code, message, ret_code=ret_code, ret_msg=message, path=path, details=details)
 
     def _public_get(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         self._guard_rate_limit()

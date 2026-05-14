@@ -7,6 +7,13 @@ def _bool_env(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).lower() in {'1', 'true', 'yes', 'on'}
 
 
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime-настройки.
@@ -26,6 +33,9 @@ class Settings:
     bybit_live_confirm: bool = field(default_factory=lambda: _bool_env('BYBIT_LIVE_CONFIRM', False))
     bybit_api_key: str = field(default_factory=lambda: os.getenv('BYBIT_API_KEY', ''))
     bybit_api_secret: str = field(default_factory=lambda: os.getenv('BYBIT_API_SECRET', ''))
+    bybit_recv_window_ms: int = field(default_factory=lambda: _int_env('BYBIT_RECV_WINDOW_MS', 8000))
+    bybit_time_sync_ttl_sec: int = field(default_factory=lambda: _int_env('BYBIT_TIME_SYNC_TTL_SEC', 60))
+    bybit_time_safety_margin_ms: int = field(default_factory=lambda: _int_env('BYBIT_TIME_SAFETY_MARGIN_MS', 250))
     ollama_base_url: str = field(default_factory=lambda: os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434'))
     ollama_model: str = field(default_factory=lambda: os.getenv('OLLAMA_MODEL', 'llama3.1'))
     demo_mode: bool = field(default_factory=lambda: _bool_env('CAS_DEMO_MODE', False))

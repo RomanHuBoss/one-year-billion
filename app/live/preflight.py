@@ -91,6 +91,9 @@ def build_adapter(settings: Settings) -> BybitAdapter:
         testnet=settings.bybit_testnet,
         trading_enabled=settings.trading_enabled,
         live_confirm=settings.bybit_live_confirm,
+        recv_window_ms=settings.bybit_recv_window_ms,
+        time_sync_ttl_sec=settings.bybit_time_sync_ttl_sec,
+        time_safety_margin_ms=settings.bybit_time_safety_margin_ms,
     ))
 
 
@@ -131,6 +134,8 @@ def _operator_hint_for_bybit_private_errors(errors: list[dict[str, Any]]) -> lis
         'Проверьте права ключа: для Linear USDT Futures нужны contract/derivatives trade/order permissions.',
         'После исправления перезапустите backend и повторите Testnet preflight.',
     ]
+    if any(str(err.get('ret_code')) == '10002' or err.get('code') == 'bybit_timestamp_window_error' for err in errors):
+        hints.insert(0, 'retCode=10002 означает не плохой ключ, а рассинхрон времени/recv_window. Backend теперь синхронизирует подпись с Bybit server time; если ошибка повторяется, включите синхронизацию часов Windows и повторите preflight.')
     if any(str(err.get('ret_code')) in {'10003', '10004', '10005', '10007'} for err in errors):
         hints.insert(0, 'retCode похож на проблему ключа/подписи/permissions: чаще всего перепутаны testnet/live keys или неверный secret.')
     return hints
@@ -166,7 +171,12 @@ def _run_bybit_runtime_checks(settings: Settings, runtime, reasons: list[str], c
 
     adapter = adapter or build_adapter(settings)
     try:
-        server = adapter.get_server_time()
+        if hasattr(adapter, 'sync_time'):
+            server = adapter.sync_time()
+            if hasattr(adapter, 'time_sync_status'):
+                data['bybit_time_sync'] = adapter.time_sync_status()
+        else:
+            server = adapter.get_server_time()
         data['bybit_server_time'] = server.get('time') or server.get('result')
         checks['bybit_public_api_reachable'] = True
     except Exception as exc:
@@ -243,6 +253,8 @@ def _run_bybit_runtime_checks(settings: Settings, runtime, reasons: list[str], c
         and checks.get('bybit_wallet_balance_verified')
         and checks.get('bybit_positions_verified')
     )
+    if hasattr(adapter, 'time_sync_status'):
+        data['bybit_time_sync'] = adapter.time_sync_status()
     if private_errors:
         data['bybit_private_errors'] = private_errors
         data['operator_private_api_hint'] = _operator_hint_for_bybit_private_errors(private_errors)
