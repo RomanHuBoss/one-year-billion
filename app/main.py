@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.settings import Settings
@@ -75,6 +75,24 @@ def create_app() -> FastAPI:
     app.state.order_router = OrderRouter(app.state.idempotency)
     app.state.operator_jobs = OperatorJobRunner(secrets=[settings.bybit_api_key, settings.bybit_api_secret, settings.operator_api_key, settings.readonly_api_key, settings.database_url])
     _install_database(app, settings)
+
+
+    @app.middleware('http')
+    async def no_cache_frontend_assets(request: Request, call_next):
+        """Не даем браузеру использовать старый JS/CSS после обновления панели.
+
+        Операторская панель должна загружать согласованную пару index.html + app.js.
+        Иначе браузер может оставить старый app.js в кеше и получить ошибку вида
+        `$(...) is null`, когда старый скрипт ищет DOM-элементы прежней версии.
+        API-ответы также не должны кешироваться операторским экраном.
+        """
+        response = await call_next(request)
+        path = request.url.path
+        if path == '/' or path.endswith(('.html', '.js', '.css')) or path.startswith('/api/operator'):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
 
     app.add_middleware(
         CORSMiddleware,

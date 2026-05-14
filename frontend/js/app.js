@@ -1,7 +1,36 @@
 import { api } from './api_client.js';
 import { installContextHelp } from './context_help.js';
 
-const $ = (id) => document.getElementById(id);
+function $(id) {
+  let el = document.getElementById(id);
+  if (!el) {
+    console.error(`DOM mismatch: element #${id} not found. Creating inert placeholder to avoid operator panel crash.`);
+    let root = document.getElementById('domMismatchPlaceholders');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'domMismatchPlaceholders';
+      root.hidden = true;
+      document.body.appendChild(root);
+    }
+    el = document.createElement('div');
+    el.id = id;
+    root.appendChild(el);
+  }
+  return el;
+}
+
+function must(id) {
+  const el = $(id);
+  if (!el) {
+    throw new Error(`DOM mismatch: element #${id} not found. Выполните Ctrl+F5 или очистите кеш страницы.`);
+  }
+  return el;
+}
+
+function setHtml(id, html) { must(id).innerHTML = html; }
+function setText(id, text) { must(id).textContent = text; }
+function setClass(id, className) { must(id).className = className; }
+
 let workflow = null;
 let dashboard = null;
 let selectedSymbol = null;

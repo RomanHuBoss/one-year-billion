@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Мастер запуска · Crypto Acceleration System 2026</title>
-  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/styles.css?v=operator-workflow-20260514-2" />
 </head>
 <body>
   <header class="app-header">
@@ -103,6 +103,13 @@
       <div id="actionResult" class="job-output empty-state">Действия еще не запускались.</div>
     </section>
 
+
+    <div id="legacyDomCompatibility" hidden aria-hidden="true">
+      <div id="operatorJobResult"></div><div id="cards"></div><div id="blockers"></div><div id="limits"></div><div id="steps"></div><div id="safeActions"></div><div id="paperSummary"></div>
+      <input id="commandOperatorKey" /><input id="operatorKey" /><input id="commandReason" /><input id="actionReason" />
+      <button id="runPaperBtn"></button><button id="copyJsonBtn"></button><button id="toggleDiagnosticsBtn"></button>
+    </div>
+
     <div class="sr-only" aria-hidden="true">Операторский модуль · Панель допуска · Что мешает запуску · Безопасные действия оператора · Операционный центр · python scripts/bootstrap_db.py · status_effective</div>
 
     <section id="diagnostics" class="panel diagnostics hidden">
@@ -114,6 +121,6 @@
     </section>
   </main>
 
-  <script type="module" src="/js/app.js"></script>
+  <script type="module" src="/js/app.js?v=operator-workflow-20260514-2"></script>
 </body>
 </html>
