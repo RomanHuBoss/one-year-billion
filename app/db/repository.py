@@ -118,6 +118,34 @@ class Repository:
                 reasons.append(reason)
         return not reasons, reasons, data
 
+
+    def evidence_summary(self, config_hash: str) -> dict[str, dict[str, Any] | None]:
+        """Возвращает последние записи evidence по каждому gate для операторского мастера.
+
+        Frontend не вычисляет readiness сам: он получает уже нормализованный
+        backend snapshot и только отображает статус.
+        """
+
+        summary: dict[str, dict[str, Any] | None] = {}
+        for evidence_type in ['PHASE0_PAPER', 'RECONCILIATION', 'SECURITY', 'CI', 'GO_NO_GO']:
+            row = self.db.fetch_one(
+                """
+                SELECT *,
+                       CASE
+                         WHEN started_at IS NOT NULL AND COALESCE(ended_at, now()) >= started_at
+                         THEN EXTRACT(EPOCH FROM (COALESCE(ended_at, now()) - started_at))/86400.0
+                         ELSE 0
+                       END AS paper_days
+                FROM go_no_go_evidence
+                WHERE evidence_type=%s AND config_hash=%s
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                [evidence_type, config_hash],
+            )
+            summary[evidence_type] = row
+        return summary
+
     def log_manual_action(self, actor: str, action: str, reason: str, target: dict[str, Any], status: str, trace_id: str) -> None:
         self.db.execute(
             """

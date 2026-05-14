@@ -309,3 +309,10 @@ main.py               единая CLI-точка запуска
 В операторском интерфейсе эта ошибка относится к ключу доступа к backend (`OPERATOR_API_KEY` или `READONLY_API_KEY`), а не к ключу Bybit. Введите ключ из `.env` в поле **API-доступ** в верхней панели и нажмите **Обновить**. Для чтения dashboard допустим `READONLY_API_KEY`, для запуска команд и безопасных действий нужен `OPERATOR_API_KEY`.
 
 Если ошибка появляется в `python main.py preflight --mode testnet` в блоке `bybit_private_api_auth_failed`, это уже private-доступ Bybit: проверьте `BYBIT_TESTNET`, пару `BYBIT_API_KEY`/`BYBIT_API_SECRET`, IP whitelist и права Linear/Contract/Derivatives.
+
+
+## Операторский мастер запуска
+
+Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
+
+Подробно: `docs/OPERATOR_WORKFLOW.md`.

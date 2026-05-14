@@ -186,3 +186,10 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 2. Если отказ появляется при write-action или запуске команды, используйте именно `OPERATOR_API_KEY`; `READONLY_API_KEY` должен давать только чтение.
 3. Если отказ находится внутри `bybit_private_api_auth_failed`, проверяйте Bybit testnet/live endpoint, ключ, secret, IP whitelist и Linear/Contract/Derivatives permissions.
 4. После правки `.env` перезапустите backend: `python main.py serve --mode testnet`.
+
+
+## Операторский мастер запуска
+
+Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
+
+Подробно: `docs/OPERATOR_WORKFLOW.md`.

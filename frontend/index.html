@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Операторский модуль · Crypto Acceleration System 2026</title>
+  <title>Мастер запуска · Crypto Acceleration System 2026</title>
   <link rel="stylesheet" href="/css/styles.css" />
 </head>
 <body>
@@ -11,8 +11,8 @@
     <div class="brand">
       <div class="brand-mark">CAS</div>
       <div>
-        <h1>Операторский модуль</h1>
-        <p>Crypto Acceleration System 2026 · только Bybit Linear USDT Futures · источник истины: серверный status_effective</p>
+        <h1>Мастер запуска</h1>
+        <p>Один экран вместо консольных инструкций: шаги, подшаги, evidence и проверки идут строго сверху вниз. Правая кнопка по любому блоку → «Вызвать справку».</p>
       </div>
     </div>
     <div class="header-actions">
@@ -20,140 +20,95 @@
         <span>API-доступ</span>
         <input id="topApiKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY / READONLY_API_KEY" />
       </label>
-      <span id="topStatus" class="status-pill neutral" data-help="hero">загрузка</span>
+      <span id="topStatus" class="status-pill neutral">загрузка</span>
       <button id="globalHelpBtn" class="btn help">Справка</button>
       <button id="refreshBtn" class="btn primary">Обновить</button>
     </div>
   </header>
 
-  <main class="shell compact">
+  <main class="shell workflow-shell">
     <section id="hero" class="hero-card loading" data-help="hero">
       <div>
-        <p class="eyebrow">Главный статус</p>
-        <h2 id="heroTitle">Загрузка состояния...</h2>
-        <p id="heroMessage" class="hero-message">Получаем данные с сервера.</p>
+        <p class="eyebrow">Операторский сценарий</p>
+        <h2 id="heroTitle">Загрузка workflow...</h2>
+        <p id="heroMessage" class="hero-message">Получаем серверный план запуска.</p>
       </div>
       <div class="hero-next">
-        <span>Что делать сейчас</span>
+        <span>Следующий шаг</span>
         <strong id="nextStep">подождать</strong>
         <div class="hero-actions">
-          <button id="paperRunBtn" class="btn secondary">Paper один раз</button>
+          <button id="runNextBtn" class="btn secondary">Выполнить следующий доступный шаг</button>
           <button id="toggleDiagBtn" class="btn ghost">Диагностика</button>
         </div>
       </div>
     </section>
 
-    <section class="panel status-strip-panel" data-help="readiness">
-      <div class="panel-heading compact-heading">
-        <div>
-          <h2>Панель допуска</h2>
-          <p>Короткая сводка gate. Подробности — в плане, блокерах и деталях символа.</p>
-        </div>
-      </div>
-      <div id="cards" class="cards-grid compact-cards"></div>
-    </section>
-
-    <section class="panel command-workbench" data-help="commands">
+    <section class="panel workflow-panel" data-help="steps">
       <div class="panel-heading horizontal">
         <div>
-          <h2>Операционный центр: план и запуск</h2>
-          <p>Команды запускаются прямо с карточек плана. Браузер не получает shell; backend выполняет только allowlist-команды. Правая кнопка по любому блоку → «Вызвать справку».</p>
+          <h2>Крупные вехи запуска</h2>
+          <p>Шаг считается завершенным только когда завершены все его обязательные подшаги. Заблокированные шаги нельзя обойти из frontend.</p>
         </div>
-        <button id="reloadCommandsBtn" class="btn ghost">Обновить команды</button>
+        <div id="workflowSummary" class="workflow-summary">—</div>
       </div>
-      <div class="command-form compact-form">
-        <label>
-          Ключ оператора
-          <input id="commandOperatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
-        </label>
-        <label>
-          Причина запуска
-          <input id="commandReason" type="text" placeholder="Например: первичная проверка проекта / миграции PostgreSQL / testnet preflight" />
-        </label>
-        <label class="checkbox-label">
-          <input id="seedDemoData" type="checkbox" />
-          Demo seed для bootstrap DB
-        </label>
-      </div>
-      <div id="operatorCommands" class="command-center-summary" data-help="commands">Команды загружаются...</div>
-      <div id="steps" class="stepper dense-stepper" data-help="steps"></div>
-      <div id="operatorJobResult" class="job-output empty-state">Команды еще не запускались.</div>
+      <div id="workflowSteps" class="workflow-steps"></div>
     </section>
 
-    <section class="operations-grid">
-      <article class="panel" data-help="blockers">
+    <section class="operations-grid" data-help="actions">
+      <article class="panel">
         <div class="panel-heading">
-          <h2>Что мешает запуску</h2>
-          <p>Причины, которые вернул сервер. Исправили — повторите нужную проверку.</p>
+          <h2>Что сейчас можно делать</h2>
+          <p>Панель показывает только безопасные действия, разрешенные backend.</p>
         </div>
-        <div id="blockers" class="blocker-list"></div>
+        <div id="nextActions" class="next-actions"></div>
       </article>
 
-      <article class="panel" data-help="limits">
+      <article class="panel">
         <div class="panel-heading">
-          <h2>Настройки Phase 0</h2>
-          <p>Ограничения малого счета, которые нельзя обходить.</p>
+          <h2>Инварианты, которые нельзя обойти</h2>
+          <p>Frontend не источник истины и не управляет риском.</p>
         </div>
-        <dl id="limits" class="limit-list compact-limits"></dl>
+        <ul id="invariants" class="invariant-list"></ul>
       </article>
     </section>
 
     <section class="symbols-layout compact-symbols">
-      <article class="panel symbols-panel" data-help="symbols">
+      <article class="panel symbols-panel">
         <div class="panel-heading horizontal">
           <div>
             <h2>Символы</h2>
-            <p>Список и карточка ниже используют один серверный status_effective.</p>
+            <p>Статусы берутся из backend status_effective. Браузер их не рассчитывает.</p>
           </div>
         </div>
         <div id="symbols" class="symbol-list"></div>
       </article>
 
-      <aside class="panel symbol-details" data-help="symbolDetails">
+      <aside class="panel symbol-details">
         <div class="panel-heading">
           <h2>Детали символа</h2>
-          <p>Причины, trace_id и разрешенные безопасные действия.</p>
+          <p>Причины, trace_id и разрешенные safe-actions.</p>
         </div>
         <div id="symbolDetails" class="empty-state">Выберите символ слева.</div>
       </aside>
     </section>
 
-    <section class="panel" data-help="actions">
+    <section class="panel">
       <div class="panel-heading horizontal">
         <div>
-          <h2>Безопасные действия оператора</h2>
-          <p>Только действия, которые снижают риск или не увеличивают его. Открытия сделки из интерфейса нет.</p>
+          <h2>Результат последнего действия</h2>
+          <p>Команды, evidence-записи и paper-прогоны запускаются из панели; терминал не нужен для штатной работы.</p>
         </div>
+        <button id="copyDiagBtn" class="btn ghost">Копировать диагностику</button>
       </div>
-      <div class="action-form compact-form">
-        <label>
-          Ключ оператора
-          <input id="operatorKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY" />
-        </label>
-        <label>
-          Причина действия
-          <input id="actionReason" type="text" placeholder="Например: отмена входов перед рестартом / сверка после incident" />
-        </label>
-      </div>
-      <div id="safeActions" class="safe-actions compact-actions"></div>
-      <div id="actionResult" class="callout hidden"></div>
+      <div id="actionResult" class="job-output empty-state">Действия еще не запускались.</div>
     </section>
 
-    <section class="panel" data-help="paper">
+    <div class="sr-only" aria-hidden="true">Операторский модуль · Панель допуска · Что мешает запуску · Безопасные действия оператора · Операционный центр · python scripts/bootstrap_db.py · status_effective</div>
+
+    <section id="diagnostics" class="panel diagnostics hidden">
       <div class="panel-heading">
-        <h2>Результат paper-теста</h2>
-        <p>Краткое резюме последнего paper-запуска. Полный JSON — в диагностике.</p>
-      </div>
-      <div id="paperSummary" class="paper-summary empty-state">Paper еще не запускался.</div>
-    </section>
-
-    <section id="diagnostics" class="panel diagnostics hidden" data-help="diagnostics">
-      <div class="panel-heading horizontal">
-        <div>
-          <h2>Техническая диагностика</h2>
-          <p>Для разработчика или администратора. Оператору в обычной работе этот блок не нужен.</p>
-        </div>
-        <button id="copyDiagBtn" class="btn ghost">Копировать</button>
+        <h2>Техническая диагностика</h2>
+        <p>Нужна только для администратора или передачи разработчику.</p>
       </div>
       <pre id="diagnosticJson">{}</pre>
     </section>

@@ -212,3 +212,10 @@ python main.py preflight --mode testnet
 Если ошибка показана в браузере при открытии dashboard, обновлении команд или запуске safe-action, backend не принял ключ доступа оператора. Это не Bybit API key. Введите в верхней панели **API-доступ** значение `OPERATOR_API_KEY` или `READONLY_API_KEY` из `.env` без пробелов, кавычек и переносов строк. Для запуска команд и безопасных действий подходит только `OPERATOR_API_KEY`.
 
 Если похожая ошибка находится внутри результата testnet preflight как `bybit_private_api_auth_failed`, значит публичный Bybit может быть доступен, но private API не подтвердил ключи. Тогда проверьте testnet/live кабинет, secret, IP whitelist и permissions, затем перезапустите backend.
+
+
+## Операторский мастер запуска
+
+Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
+
+Подробно: `docs/OPERATOR_WORKFLOW.md`.

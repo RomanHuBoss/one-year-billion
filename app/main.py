@@ -14,7 +14,7 @@ from app.security.startup_guard import validate_startup_security
 from app.db.connection import Database
 from app.db.repository import Repository
 from app.services.operator_jobs import OperatorJobRunner
-from app.api.routes import health, state, risk, signals, execution, actions, ml, llm, paper, incidents, runtime, operator, operator_jobs
+from app.api.routes import health, state, risk, signals, execution, actions, ml, llm, paper, incidents, runtime, operator, operator_jobs, operator_workflow
 
 
 def _install_database(app: FastAPI, settings: Settings) -> None:
@@ -83,7 +83,7 @@ def create_app() -> FastAPI:
         allow_methods=['*'],
         allow_headers=['*'],
     )
-    for router in [health.router, state.router, risk.router, signals.router, execution.router, actions.router, ml.router, llm.router, paper.router, incidents.router, runtime.router, operator.router, operator_jobs.router]:
+    for router in [health.router, state.router, risk.router, signals.router, execution.router, actions.router, ml.router, llm.router, paper.router, incidents.router, runtime.router, operator.router, operator_jobs.router, operator_workflow.router]:
         app.include_router(router)
 
     frontend = Path(__file__).resolve().parent.parent / 'frontend'
