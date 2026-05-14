@@ -8,6 +8,7 @@ from app.api.dependencies import request_id
 from app.live.preflight import run_live_preflight
 from app.schemas.api_contract import ApiEnvelope
 from app.security.auth import require_read
+from app.db.availability import ensure_database_ready
 
 router = APIRouter(prefix='/api/operator', tags=['operator'])
 
@@ -87,13 +88,14 @@ def _level_from_status(status: str, severity: str | None = None) -> str:
 
 
 def _runtime_result(request: Request):
+    ensure_database_ready(request.app)
     settings = request.app.state.settings
     runtime = request.app.state.runtime_config
     if settings.live_requested:
         return run_live_preflight(
             settings=settings,
             runtime=runtime,
-            db_available=bool(getattr(request.app.state, 'db_available', False)),
+            db_available=bool(getattr(request.app.state, 'db_available', False)) and bool(getattr(request.app.state, 'db_schema_ready', False)),
             repository=getattr(request.app.state, 'repository', None),
         )
 
@@ -176,7 +178,7 @@ def _symbol_hint(status: str, reasons: list[str]) -> str:
 def _readiness_cards(request: Request, runtime_result) -> list[dict[str, str]]:
     settings = request.app.state.settings
     runtime = request.app.state.runtime_config
-    db_available = bool(getattr(request.app.state, 'db_available', False))
+    db_available = bool(getattr(request.app.state, 'db_available', False)) and bool(getattr(request.app.state, 'db_schema_ready', False))
     checks = getattr(runtime_result, 'checks', {}) or {}
     return [
         {
@@ -227,7 +229,7 @@ def _readiness_cards(request: Request, runtime_result) -> list[dict[str, str]]:
 def _operator_steps(request: Request, runtime_result) -> list[dict[str, Any]]:
     settings = request.app.state.settings
     checks = getattr(runtime_result, 'checks', {}) or {}
-    db_available = bool(getattr(request.app.state, 'db_available', False))
+    db_available = bool(getattr(request.app.state, 'db_available', False)) and bool(getattr(request.app.state, 'db_schema_ready', False))
     return [
         {
             'id': 'validate',
@@ -365,6 +367,9 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
             'runtime_data': getattr(runtime_result, 'data', {}),
             'runtime_reasons': reasons,
             'database_available': bool(getattr(request.app.state, 'db_available', False)),
+            'database_schema_ready': bool(getattr(request.app.state, 'db_schema_ready', False)),
+            'database_missing_tables': getattr(request.app.state, 'db_missing_tables', []),
+            'database_error': getattr(request.app.state, 'db_startup_error', None),
             'live_order_submit_enabled': runtime_result.status == 'ok' and settings.can_live_trade,
             'frontend_source_of_truth': 'backend_status_effective',
         },

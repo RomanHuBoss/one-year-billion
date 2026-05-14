@@ -4,6 +4,7 @@ from app.api.dependencies import request_id
 from app.schemas.api_contract import ApiEnvelope
 from app.security.auth import require_read
 from app.live.preflight import run_live_preflight
+from app.db.availability import ensure_database_ready
 
 router = APIRouter(prefix='/api/runtime', tags=['runtime'])
 
@@ -12,6 +13,7 @@ router = APIRouter(prefix='/api/runtime', tags=['runtime'])
 async def preflight(request: Request, rid: str = Depends(request_id), actor: str = Depends(require_read)) -> ApiEnvelope:
     """Runtime gate: local smoke в demo и строгий live-preflight при live-флагах."""
 
+    ensure_database_ready(request.app)
     settings = request.app.state.settings
     runtime = request.app.state.runtime_config
     state = request.app.state.demo_state
@@ -20,7 +22,7 @@ async def preflight(request: Request, rid: str = Depends(request_id), actor: str
         result = run_live_preflight(
             settings=settings,
             runtime=runtime,
-            db_available=bool(getattr(request.app.state, 'db_available', False)),
+            db_available=bool(getattr(request.app.state, 'db_available', False)) and bool(getattr(request.app.state, 'db_schema_ready', False)),
             repository=getattr(request.app.state, 'repository', None),
         )
         return ApiEnvelope(request_id=rid, status=result.status, reasons=result.reasons, data={
@@ -30,6 +32,7 @@ async def preflight(request: Request, rid: str = Depends(request_id), actor: str
             'operator_writes_require_key': True,
             'frontend_source_of_truth': 'backend_status_effective',
             'database_available': bool(getattr(request.app.state, 'db_available', False)),
+            'database_schema_ready': bool(getattr(request.app.state, 'db_schema_ready', False)),
             'db_startup_error': getattr(request.app.state, 'db_startup_error', None),
         })
 
@@ -51,6 +54,7 @@ async def preflight(request: Request, rid: str = Depends(request_id), actor: str
         'operator_writes_require_key': True,
         'frontend_source_of_truth': 'backend_status_effective',
         'database_available': bool(getattr(request.app.state, 'db_available', False)),
+        'database_schema_ready': bool(getattr(request.app.state, 'db_schema_ready', False)),
         'db_startup_error': getattr(request.app.state, 'db_startup_error', None),
         'mode': 'local_smoke',
     })

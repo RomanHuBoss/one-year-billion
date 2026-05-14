@@ -40,3 +40,41 @@ def test_frontend_contains_workflow_wizard_not_console_runbook():
     assert '/api/operator/workflow' in js
     assert '/api/operator/workflow/actions/' in js
     assert 'PHASE0_PAPER PASS после 14+ дней' not in js  # frontend не хардкодит gate logic, получает ее с backend
+
+
+def test_workflow_db_step_turns_ok_after_lazy_schema_refresh(monkeypatch):
+    from app.api.routes import operator_workflow
+
+    class FakeRepo:
+        def evidence_summary(self, _config_hash):
+            return {t: None for t in operator_workflow.EVIDENCE_TYPES}
+
+    old_repo = getattr(app.state, 'repository', None)
+    old_db_available = getattr(app.state, 'db_available', False)
+    old_db_schema_ready = getattr(app.state, 'db_schema_ready', False)
+    try:
+        app.state.repository = FakeRepo()
+        app.state.db_available = False
+        app.state.db_schema_ready = False
+
+        def fake_ensure(_app):
+            _app.state.repository = FakeRepo()
+            _app.state.db_available = True
+            _app.state.db_schema_ready = True
+            _app.state.db_missing_tables = []
+            return {'connection_ok': True, 'schema_ready': True, 'missing_tables': [], 'error': None}
+
+        monkeypatch.setattr(operator_workflow, 'ensure_database_ready', fake_ensure)
+        client = TestClient(app)
+        response = client.get('/api/operator/workflow', headers=_read_headers())
+        assert response.status_code == 200
+        data = response.json()['data']
+        db_step = next(step for step in data['steps'] if step['id'] == 'db')
+        assert db_step['status'] == 'ok'
+        assert db_step['blocks_next'] is False
+        assert data['database_available'] is True
+        assert data['database_schema_ready'] is True
+    finally:
+        app.state.repository = old_repo
+        app.state.db_available = old_db_available
+        app.state.db_schema_ready = old_db_schema_ready

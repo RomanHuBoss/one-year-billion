@@ -12,6 +12,7 @@ from app.execution.idempotency import namespaced_idempotency_key
 from app.paper_trading.pipeline import PaperPipeline
 from app.schemas.api_contract import ApiEnvelope
 from app.security.auth import require_operator, require_read
+from app.db.availability import ensure_database_ready
 
 router = APIRouter(prefix='/api/operator/workflow', tags=['operator-workflow'])
 
@@ -87,9 +88,12 @@ def _job_step(command_id: str, title: str, job: dict[str, Any] | None, locked: b
 def build_workflow(request: Request) -> dict[str, Any]:
     settings = request.app.state.settings
     runtime = request.app.state.runtime_config
+    db_state = ensure_database_ready(request.app)
     repo = getattr(request.app.state, 'repository', None)
-    db_ok = bool(getattr(request.app.state, 'db_available', False))
-    evidence = _evidence_rows(request)
+    db_connection_ok = bool(db_state.get('connection_ok'))
+    db_schema_ready = bool(db_state.get('schema_ready'))
+    db_ok = db_connection_ok and db_schema_ready
+    evidence = _evidence_rows(request) if db_ok else {t: None for t in EVIDENCE_TYPES}
 
     validate_job = _job_status(request, 'validate')
     testnet_job = _job_status(request, 'preflight_testnet')
@@ -119,8 +123,8 @@ def build_workflow(request: Request) -> dict[str, Any]:
         'action_id': None if db_ok else 'run_bootstrap_db',
         'primary_button': None if db_ok else 'Применить migrations',
         'substeps': [
-            {'title': 'PostgreSQL доступен серверу', 'status': 'ok' if db_ok else 'todo'},
-            {'title': 'DB constraints/audit/evidence доступны', 'status': 'ok' if db_ok else 'todo'},
+            {'title': 'PostgreSQL доступен серверу', 'status': 'ok' if db_connection_ok else 'todo'},
+            {'title': 'DB constraints/audit/evidence доступны', 'status': 'ok' if db_schema_ready else 'todo', 'details': ', '.join(db_state.get('missing_tables') or [])},
         ],
         'blocks_next': not db_ok,
     })
@@ -276,7 +280,10 @@ def build_workflow(request: Request) -> dict[str, Any]:
             'Live невозможен до Go/No-Go PASS и unresolved CRITICAL/HIGH = 0',
         ],
         'repository_available': repo is not None,
-        'database_available': db_ok,
+        'database_available': db_connection_ok,
+        'database_schema_ready': db_schema_ready,
+        'database_missing_tables': db_state.get('missing_tables') or [],
+        'database_error': db_state.get('error'),
     }
 
 

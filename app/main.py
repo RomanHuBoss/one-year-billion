@@ -13,6 +13,7 @@ from app.execution.order_router import OrderRouter
 from app.security.startup_guard import validate_startup_security
 from app.db.connection import Database
 from app.db.repository import Repository
+from app.db.availability import ensure_database_ready
 from app.services.operator_jobs import OperatorJobRunner
 from app.api.routes import health, state, risk, signals, execution, actions, ml, llm, paper, incidents, runtime, operator, operator_jobs, operator_workflow
 
@@ -30,6 +31,8 @@ def _install_database(app: FastAPI, settings: Settings) -> None:
     app.state.repository = None
     app.state.db_available = False
     app.state.db_startup_error = None
+    app.state.db_schema_ready = False
+    app.state.db_missing_tables = []
 
     should_open = settings.require_db_for_live and settings.live_requested
     if not should_open and settings.app_env == 'local':
@@ -48,6 +51,9 @@ def _install_database(app: FastAPI, settings: Settings) -> None:
     app.state.db = db
     app.state.repository = Repository(db)
     app.state.db_available = True
+    # Проверяем наличие tables/constraints для operator workflow; при старой
+    # схеме шаг миграций должен оставаться TODO, а не зеленеть от SELECT 1.
+    ensure_database_ready(app)
 
 
 @asynccontextmanager
