@@ -1,0 +1,274 @@
+Ты — senior frontend engineer, product designer, UX architect, QA lead и security reviewer.
+
+Задача: глубоко доработать frontend/operator dashboard проекта Crypto Acceleration System 2026 так, чтобы операторская страница выглядела современно, профессионально и соответствовала лучшим UI/UX-подходам 2026 года, но при этом не нарушала ни одного safety-инварианта торговой системы.
+
+Входные артефакты:
+- zip-архив проекта;
+- specification.docx;
+- roadmap.docx;
+- OPERATOR_MANUAL.docx;
+- total_project_check.txt, если есть.
+
+Нормативный приоритет:
+1. specification.docx — главный источник требований;
+2. roadmap.docx — backlog-проекция спецификации;
+3. OPERATOR_MANUAL.docx — источник операторской терминологии;
+4. текущий код проекта;
+5. эстетические улучшения UI.
+
+Если между красотой интерфейса и safety-инвариантами есть конфликт — всегда выбирать safety.
+
+Главная цель:
+Сделать операторский frontend не «технической простыней», а современным operator cockpit уровня 2026 года:
+- визуально чистым;
+- адаптивным;
+- data-dense, но читаемым;
+- с понятной иерархией статусов;
+- с быстрым пониманием: можно ли запускать testnet/live, что заблокировано, почему, что делать дальше;
+- без misleading ACTIVE;
+- без frontend-бизнес-логики;
+- без хранения секретов;
+- без прямых вызовов Bybit из браузера.
+
+КРИТИЧЕСКИЕ ИНВАРИАНТЫ, КОТОРЫЕ НЕЛЬЗЯ НАРУШАТЬ
+
+1. Frontend не является source of truth.
+2. Frontend не считает status, qty, leverage, risk budget, risk decision, exposure, ACTIVE/BLOCKED.
+3. Все operational statuses берутся только с backend.
+4. Для символов использовать backend `status_effective`, `severity`, `reasons`, `trace_id`, `allowed_actions`.
+5. Таблица символов и карточка выбранного символа должны использовать один и тот же backend status.
+6. При конфликте статусов показывать ERROR_RECONCILIATION_REQUIRED, если backend это отдает.
+7. Frontend не хранит API keys, Bybit keys, secrets, tokens в localStorage/sessionStorage/window/global JS.
+8. Frontend не вызывает Bybit напрямую.
+9. Write-actions только через backend allowlist endpoints.
+10. Manual actions только risk-reducing:
+   - disable trading;
+   - cancel open entries;
+   - flatten/reduce;
+   - resolve incident;
+   - config proposal/activation, если предусмотрено backend.
+11. Никакой кнопки «открыть сделку», «увеличить плечо», «повысить риск», «обойти risk engine».
+12. Live не должен выглядеть доступным, если Go/No-Go не PASS или backend возвращает blocked.
+13. Testnet preflight не должен требовать live Go/No-Go, если спецификация проекта это уже запрещает.
+14. Любой blocked/fail-closed status должен выглядеть как нормальное защитное состояние, а не как поломка UI.
+15. Все пользовательские подписи — на русском языке.
+
+UX/UI-ТРЕБОВАНИЯ 2026
+
+Сделать интерфейс в духе современного enterprise/safety cockpit:
+
+1. Общая композиция
+   - Верхняя hero/status-панель: один главный ответ оператору — состояние системы, режим, severity, следующий шаг.
+   - Компактная панель допуска: trading, DB, risk engine, live gate, phase, ML, reconciliation, protection.
+   - Блок «Что мешает запуску»: reasons/blockers с severity, trace_id, human-readable explanation.
+   - Блок «Операционный центр»: validate, preflight testnet, migrations, live preflight, paper/shadow smoke, если endpoints есть.
+   - Timeline/roadmap перехода testnet → paper/shadow → Go/No-Go → live.
+   - Секция символов: BTCUSDT/ETHUSDT/SOLUSDT или backend universe.
+   - Детальная карточка выбранного символа.
+   - Секция safe actions.
+   - Секция diagnostics/evidence, если backend отдает данные.
+
+2. Визуальный стиль
+   - Современная темная тема по умолчанию.
+   - Поддержать светлую тему, если это не ломает текущую архитектуру.
+   - Использовать layered surfaces: cards, panels, subtle gradients, glass/acrylic effects умеренно.
+   - Хорошая типографика: крупные заголовки, читаемый body text, mono для команд/trace_id.
+   - Большие округления, мягкие тени, аккуратные border/highlight states.
+   - Цвета должны кодировать operational severity, а не торговый совет.
+   - Не использовать кислотную «крипто-казино» эстетику.
+   - Не перегружать анимациями; microinteractions допустимы только для hover/focus/expand/update.
+
+3. Информационная архитектура
+   - Оператор за 5 секунд должен понять:
+     a) можно ли запускать testnet;
+     b) почему live заблокирован;
+     c) какие проверки уже PASS;
+     d) какие blockers остались;
+     e) какие действия доступны безопасно.
+   - Повторяющиеся блоки объединить.
+   - Дублирующие карточки и отчеты удалить.
+   - Long text прятать в раскрываемые панели, tooltips, details/summary или contextual help.
+   - Trace ID всегда доступен рядом с причиной/событием.
+
+4. Accessibility
+   - Ориентироваться на WCAG 2.2 AA.
+   - Контраст текста достаточный.
+   - Все интерактивные элементы доступны с клавиатуры.
+   - Есть focus states.
+   - Не полагаться только на цвет.
+   - У кнопок понятные aria-label/title, если контекст неочевиден.
+   - Motion не должен быть обязательным для понимания.
+   - Таблицы/списки должны быть читаемыми на 1366px, 1920px и мобильной ширине.
+
+5. Responsive
+   - Desktop-first, но интерфейс должен нормально работать на laptop и tablet.
+   - Grid должен перестраиваться: 3 колонки → 2 → 1.
+   - Карточки не должны быть случайной разной высоты там, где нужна регулярность.
+   - Важные controls не должны исчезать на мобильной ширине.
+
+6. Операторские команды
+   - Убрать browser `prompt()` / `alert()` для рабочих действий.
+   - Сделать встроенные поля:
+     - `OPERATOR_API_KEY` / `approved_by`, если требуется backend;
+     - `reason`;
+     - optional comment.
+   - Результат команды показывать в карточке job/result:
+     - status: ok / blocked / error / timeout;
+     - stdout/stderr;
+     - reasons;
+     - trace_id/request_id;
+     - timestamp.
+   - Не давать произвольный shell.
+   - Запускать только backend allowlist-команды.
+
+7. Frontend-архитектура
+   - Не менять стек проекта без необходимости.
+   - Если проект на vanilla JS/CSS — остаться на vanilla JS/CSS.
+   - Не добавлять тяжелый React/Vite/Tailwind, если этого нет в проекте и это ломает запуск.
+   - Код должен быть аккуратным, понятным, с русскими комментариями там, где описана бизнес/safety-логика отображения.
+   - Разделить:
+     - получение данных;
+     - render state;
+     - UI helpers;
+     - actions;
+     - formatting.
+   - Не дублировать расчеты backend.
+   - Любые fallback/mock/demo состояния должны быть явно помечены и не должны выглядеть как live.
+
+8. Данные и API
+   - Найти существующие API endpoints проекта.
+   - Не придумывать endpoint, если backend его не поддерживает.
+   - Если нужен endpoint для UX, но его нет — либо аккуратно использовать существующий, либо добавить backend endpoint с тестами, не нарушая safety.
+   - Обрабатывать ошибки сети, 401/403, 500, timeout.
+   - При отсутствии данных показывать safe empty state, а не зеленый статус.
+
+ОБЯЗАТЕЛЬНЫЕ ДЕЙСТВИЯ ПО КОДУ
+
+1. Распаковать проект.
+2. Изучить:
+   - frontend/index.html;
+   - frontend/css/styles.css;
+   - frontend/js/app.js;
+   - app/api;
+   - tests;
+   - README.md;
+   - docs/RUNBOOK.md;
+   - docs/OPERATOR_MANUAL.docx или актуальный операторский документ.
+3. Найти все места, где frontend:
+   - сам считает статус;
+   - сам делает risk interpretation;
+   - дублирует backend business rules;
+   - использует prompt/alert;
+   - может показать misleading ACTIVE;
+   - хранит чувствительные данные.
+4. Исправить эти места.
+5. Освежить UI:
+   - layout;
+   - cards;
+   - typography;
+   - colors;
+   - responsive grid;
+   - command center;
+   - symbol cards;
+   - blocker list;
+   - traceability/evidence;
+   - contextual help.
+6. Обновить документацию:
+   - README.md, если изменился запуск;
+   - docs/RUNBOOK.md, если изменился workflow оператора;
+   - docs/OPERATOR_MANUAL или его markdown/html-аналог, если UI изменен.
+7. Удалить дублирующие устаревшие frontend-документы, если они конфликтуют, но не удалять обязательные README/RUNBOOK/GO_NO_GO/TRACEABILITY.
+
+ТЕСТИРОВАНИЕ
+
+После доработки обязательно выполнить:
+
+1. Python/проектная валидация:
+   - `python main.py validate`
+
+2. Pytest:
+   - `pytest`
+
+3. CLI smoke:
+   - `python main.py`
+   - `python main.py validate`
+   - `python main.py preflight --mode testnet`
+   - `python main.py preflight --mode live`
+
+4. Frontend static/DOM tests:
+   - проверить, что в HTML есть modern cockpit sections;
+   - нет `prompt(` и `alert(` для операторских действий;
+   - нет Bybit API URL во frontend;
+   - нет storage secrets;
+   - есть `status_effective`;
+   - есть trace_id/request_id rendering;
+   - есть reason/approved_by/operator key поля для safe actions;
+   - есть responsive grid CSS;
+   - есть focus states;
+   - есть blocked/error/ok result rendering.
+
+5. Если доступен браузерный runner:
+   - открыть страницу;
+   - проверить desktop 1920px;
+   - проверить laptop 1366px;
+   - проверить mobile/tablet width;
+   - проверить клики по символам;
+   - проверить раскрытие деталей;
+   - проверить safe-action form validation;
+   - сделать screenshot до/после, если возможно.
+
+6. Security checks:
+   - secret scan;
+   - проверить отсутствие ключей во frontend bundle;
+   - проверить, что .env не попал в архив;
+   - проверить, что .env.example не содержит реальных ключей.
+
+7. Safety regression:
+   - проверить, что live по-прежнему blocked без Go/No-Go PASS;
+   - проверить, что testnet preflight не требует live Go/No-Go;
+   - проверить, что frontend не может создать order без backend/risk decision.
+
+Если часть проверок невозможно выполнить в песочнице, явно указать почему и чем это компенсировано.
+
+КРИТЕРИИ ГОТОВНОСТИ
+
+Результат считается готовым только если:
+
+1. Интерфейс визуально современный и не выглядит как черновой debug-page.
+2. Оператор понимает состояние системы без чтения логов.
+3. Нет нарушения safety-инвариантов.
+4. Frontend не source of truth.
+5. Нет секретов во frontend.
+6. Нет direct Bybit calls из браузера.
+7. Все действия оператора risk-reducing.
+8. Validate и pytest проходят.
+9. Документация актуализирована.
+10. Собран новый zip-архив проекта.
+11. В ответе указаны:
+    - какие файлы изменены;
+    - какие тесты выполнены;
+    - результаты тестов;
+    - что осталось blocked и почему;
+    - ссылка на итоговый архив;
+    - готовый текст commit message.
+
+ФОРМАТ ФИНАЛЬНОГО ОТВЕТА
+
+Вернуть:
+
+1. Краткое резюме, что сделано.
+2. Список измененных файлов.
+3. Список UI/UX-улучшений.
+4. Список safety-инвариантов, которые сохранены.
+5. Результаты тестов.
+6. Честное указание ограничений среды.
+7. Ссылку на zip-архив.
+8. Текст коммита.
+
+Запрещено:
+- писать «live-ready», если не пройдены реальные external gates;
+- скрывать failed/blocked проверки;
+- выдавать красивый UI за доказательство торговой готовности;
+- переносить risk/execution/status calculations во frontend;
+- добавлять frontend-only mock, который выглядит как реальный PASS;
+- удалять safety-документацию ради чистоты проекта.
