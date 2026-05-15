@@ -260,5 +260,15 @@ class OperatorJobRunner:
         return display
 
     def _safe_options(self, options: dict[str, Any]) -> dict[str, Any]:
-        allowed = {'seed_demo'}
-        return {k: v for k, v in options.items() if k in allowed}
+        allowed = {'seed_demo', 'operator_comment'}
+        safe: dict[str, Any] = {}
+        for key, value in options.items():
+            if key not in allowed:
+                continue
+            if key == 'operator_comment':
+                # Комментарий хранится как audit context; секреты дополнительно
+                # проходят через штатную redaction-политику runner-а.
+                safe[key] = self._redact(str(value or '').strip())[:500]
+            else:
+                safe[key] = value
+        return safe

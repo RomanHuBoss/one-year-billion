@@ -18,7 +18,7 @@
 
 ## Текущий статус готовности
 
-Редакция `2.2.0-operator-ux-command-plan` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
+Редакция `2.3.0-dark-operator-cockpit-audit-comment` подготовлена к локальному запуску, testnet-проверкам и live-gated эксплуатации. Live-submit endpoint существует, но по умолчанию заблокирован и не дойдет до Bybit без PostgreSQL, подписанного Go/No-Go, 14+ дней Phase 0 paper evidence, reconciliation/security/CI evidence, runtime Bybit checks, сохраненного approved `RiskDecision`, idempotency key и operator approval.
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
@@ -139,7 +139,14 @@ python main.py validate
 - secret scan.
 
 
-### Операционный центр без терминала
+#
+## Операторский cockpit 2026
+
+Операторский экран обновлен как темный enterprise/safety cockpit по умолчанию. Светлая тема доступна кнопкой **Светлая тема** в верхней панели и не записывает данные в `localStorage`/`sessionStorage`. Поле **Комментарий оператора** добавляет необязательный audit-context к allowlist job/options; оно не является shell-командой и не передается в Bybit.
+
+Status, severity, reasons, trace_id и allowed actions отображаются только из backend. Если backend не вернул `status_effective`, frontend показывает fail-closed предупреждение `status_effective отсутствует`, а не зеленый статус.
+
+## Операционный центр без терминала
 
 В интерфейсе есть блок **Операционный центр**. Он позволяет оператору запускать основные backend-команды из браузера:
 

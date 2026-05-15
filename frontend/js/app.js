@@ -49,6 +49,10 @@ function approvedByText() {
   return ($('workflowApprovedBy')?.value || '').trim();
 }
 
+function commentText() {
+  return ($('workflowComment')?.value || '').trim();
+}
+
 function authOptions(options = {}) {
   const k = key();
   if (!k) return options;
@@ -221,6 +225,7 @@ function renderBlockers() {
     <article class="blocker ${escapeHtml(item.level || 'danger')}">
       <code>${escapeHtml(item.code)}</code>
       <p>${escapeHtml(item.text)}</p>
+      <span class="blocker-trace">trace_id: ${escapeHtml(item.trace_id || dashboard?.trace_id || dashboard?.request_id || 'не выдан')}</span>
     </article>
   `).join('') : '<div class="blocker empty"><strong>Блокеры не обнаружены</strong><p>Это не разрешение на live-order: каждый order все равно требует approved RiskDecision и protection/reconciliation.</p></div>';
 }
@@ -255,6 +260,7 @@ function renderSafeActions() {
 
 function symbolTone(row) {
   const severity = row.severity_level || row.severity || 'info';
+  if (!row.status_effective) return 'danger';
   if (row.status_effective === 'ACTIVE') return 'ok';
   if (row.status_effective === 'ERROR_RECONCILIATION_REQUIRED' || severity === 'danger') return 'danger';
   if (row.status_effective === 'BLOCKED' || row.status_effective === 'DE_RISK' || severity === 'warning') return 'warning';
@@ -266,9 +272,11 @@ function renderSymbols() {
   $('symbols').innerHTML = symbols.map((row, idx) => {
     const selected = selectedSymbol?.symbol === row.symbol || (!selectedSymbol && idx === 0);
     const reasons = (row.reason_labels || row.reasons || []).slice(0, 2).join('; ');
-    return `<button class="symbol-row ${symbolTone(row)} ${selected ? 'selected' : ''}" data-symbol="${escapeHtml(row.symbol)}">
+    const statusText = row.status_label || row.status_effective || 'status_effective отсутствует';
+    const aria = `${row.symbol}: ${statusText}; ${reasons || 'причин нет'}; ${row.trace_id || 'trace_id отсутствует'}`;
+    return `<button class="symbol-row ${symbolTone(row)} ${selected ? 'selected' : ''}" data-symbol="${escapeHtml(row.symbol)}" aria-label="${escapeHtml(aria)}" title="${escapeHtml(aria)}">
       <span class="symbol-name">${escapeHtml(row.symbol)}</span>
-      <span class="symbol-status">${badge(row.status_label || row.status_effective, row.severity_level)}<small>${escapeHtml(reasons || 'причин нет')}</small></span>
+      <span class="symbol-status">${badge(statusText, row.status_effective ? row.severity_level : 'danger')}<small>${escapeHtml(reasons || 'причин нет')}</small></span>
       <span class="symbol-trace">${escapeHtml(row.trace_id || 'trace_id отсутствует')}</span>
     </button>`;
   }).join('') || '<div class="empty-state">Символы не загружены.</div>';
@@ -290,13 +298,13 @@ function renderSymbolDetails() {
   $('symbolDetails').innerHTML = `
     <div class="detail-title">
       <div><h3>${escapeHtml(row.symbol)}</h3><span>${escapeHtml(row.trace_id || 'trace_id отсутствует')}</span></div>
-      ${badge(row.status_label || row.status_effective, row.severity_level)}
+      ${badge(row.status_label || row.status_effective || 'status_effective отсутствует', row.status_effective ? row.severity_level : 'danger')}
     </div>
     <div class="detail-grid">
       <div class="detail-box accent"><h4>Что означает статус</h4><p>${escapeHtml(row.operator_hint || '')}</p></div>
       <div class="detail-box"><h4>Причины</h4><ul>${reasons}</ul></div>
       <div class="detail-box"><h4>Разрешенные действия</h4><div class="chip-list">${actions}</div></div>
-      <div class="detail-box"><h4>Backend source</h4><code>status_effective=${escapeHtml(row.status_effective || '')}</code></div>
+      <div class="detail-box"><h4>Backend source</h4><code>status_effective=${escapeHtml(row.status_effective || 'missing')}</code><p>Frontend не рассчитывает ACTIVE/BLOCKED и не заменяет отсутствующий backend-статус зеленым состоянием.</p></div>
     </div>`;
 }
 
@@ -340,7 +348,8 @@ function renderJob(job) {
   $('actionResult').className = `job-output ${level}`;
   $('actionResult').innerHTML = `<div class="job-head"><strong>${escapeHtml(job.title || job.command_id)}</strong>${badge(job.status, job.status === 'ok' ? 'ok' : job.status === 'running' || job.status === 'queued' ? 'info' : 'danger')}</div>
     <p><strong>Команда:</strong> <code>${escapeHtml(job.command_display || '')}</code></p>
-    <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>${error}${hints}${stdout}${stderr}`;
+    <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>
+    <p><strong>Audit:</strong> actor=${escapeHtml(job.actor || '—')} · started=${escapeHtml(job.started_at || '—')} · finished=${escapeHtml(job.finished_at || '—')}</p>${error}${hints}${stdout}${stderr}`;
 }
 
 async function pollJob(jobId) {
@@ -368,7 +377,7 @@ async function runWorkflowAction(actionId, requiresApprovedBy = false) {
   $('actionResult').className = 'job-output';
   $('actionResult').innerHTML = '<div class="loader-row"><span class="loader"></span><strong>Запрос отправлен на backend...</strong></div>';
   try {
-    const payload = await api(`/api/operator/workflow/actions/${encodeURIComponent(actionId)}`, actionOptions({ reason: reasonText(), approved_by: approvedByText() || undefined }));
+    const payload = await api(`/api/operator/workflow/actions/${encodeURIComponent(actionId)}`, actionOptions({ reason: reasonText(), approved_by: approvedByText() || undefined, options: { operator_comment: commentText() || undefined } }));
     renderResult(payload);
     await loadAll();
   } catch (err) {
@@ -419,6 +428,24 @@ async function copyDiagnostics() {
   setTimeout(() => $('copyDiagBtn').textContent = 'Копировать диагностику', 1500);
 }
 
+
+function currentTheme() {
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+}
+
+function updateThemeToggle() {
+  const btn = $('themeToggleBtn');
+  const theme = currentTheme();
+  btn.textContent = theme === 'dark' ? 'Светлая тема' : 'Темная тема';
+  btn.setAttribute('aria-pressed', theme === 'light' ? 'true' : 'false');
+}
+
+function toggleTheme() {
+  const next = currentTheme() === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  updateThemeToggle();
+}
+
 $('refreshBtn').addEventListener('click', () => loadAll().catch(showError));
 $('runNextBtn').addEventListener('click', () => {
   const next = firstAvailableAction();
@@ -429,11 +456,15 @@ $('copyDiagBtn').addEventListener('click', copyDiagnostics);
 $('topApiKey').addEventListener('keydown', event => { if (event.key === 'Enter') loadAll().catch(showError); });
 $('workflowReason').addEventListener('keydown', event => { if (event.key === 'Enter') $('runNextBtn').click(); });
 $('workflowApprovedBy').addEventListener('keydown', event => { if (event.key === 'Enter') $('runNextBtn').click(); });
+$('workflowComment').addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') $('runNextBtn').click(); });
 
 installContextHelp({
   getDashboard: () => dashboard,
   getSelectedSymbol: () => selectedSymbol,
 });
+$('themeToggleBtn')?.addEventListener('click', toggleTheme);
+updateThemeToggle();
+
 $('globalHelpBtn')?.addEventListener('click', event => {
   event.preventDefault();
   document.dispatchEvent(new CustomEvent('cas:global-help'));

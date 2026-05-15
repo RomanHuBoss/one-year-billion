@@ -338,7 +338,7 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
     data = {
         'source_of_truth': 'backend_status_effective',
         'app': settings.app_name,
-        'version': 'operator-module-v5-bybit-private-diagnostics',
+        'version': 'operator-module-v6-dark-cockpit-audit-comment',
         'operator_mode': 'live_requested' if settings.live_requested else 'local_or_testnet_safe',
         'hero': _top_banner(request, runtime_result),
         'cards': _readiness_cards(request, runtime_result),
@@ -346,8 +346,15 @@ async def operator_dashboard(request: Request, rid: str = Depends(request_id), a
         'symbols': symbols,
         'safe_actions': _safe_actions(symbols),
         'blockers': [
-            {'code': reason, 'text': _reason_to_text(reason), 'level': 'danger'}
-            for reason in reasons
+            {
+                'code': reason,
+                'text': _reason_to_text(reason),
+                'level': 'danger',
+                # Trace id выдается backend как provenance причины блокировки;
+                # frontend только отображает его и не интерпретирует severity/status.
+                'trace_id': f'blocker-{rid}-{idx}',
+            }
+            for idx, reason in enumerate(reasons, start=1)
         ],
         'limits': {
             'phase': runtime.phase,

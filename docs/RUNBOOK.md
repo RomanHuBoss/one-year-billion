@@ -156,6 +156,13 @@ python scripts/record_go_no_go_evidence.py --type GO_NO_GO --status PASS --appro
 Если PostgreSQL уже запущен, но preflight пишет, что таблица `incidents` или `go_no_go_evidence` отсутствует, сначала выполните из интерфейса **PostgreSQL: применить migrations**. Это нормальный первый шаг, а не повод включать live вручную.
 
 
+
+## Операторский cockpit 2026
+
+Операторский экран обновлен как темный enterprise/safety cockpit по умолчанию. Светлая тема доступна кнопкой **Светлая тема** в верхней панели и не записывает данные в `localStorage`/`sessionStorage`. Поле **Комментарий оператора** добавляет необязательный audit-context к allowlist job/options; оно не является shell-командой и не передается в Bybit.
+
+Status, severity, reasons, trace_id и allowed actions отображаются только из backend. Если backend не вернул `status_effective`, frontend показывает fail-closed предупреждение `status_effective отсутствует`, а не зеленый статус.
+
 ## Операторский экран 2.2
 
 1. Откройте `http://127.0.0.1:8000/`.

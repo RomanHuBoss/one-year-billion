@@ -1,10 +1,11 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Операторский модуль · Crypto Acceleration System 2026</title>
-  <link rel="stylesheet" href="/css/styles.css?v=operator-cockpit-20260515" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="stylesheet" href="/css/styles.css?v=operator-cockpit-20260515b" />
 </head>
 <body>
   <div class="app-bg" aria-hidden="true"></div>
@@ -15,7 +16,7 @@
       <div class="brand-copy">
         <p class="eyebrow">Crypto Acceleration System 2026</p>
         <h1>Операторский модуль</h1>
-        <p>Современная страница оператора: workflow, Панель допуска, Что мешает запуску, Безопасные действия оператора и backend status_effective. Правая кнопка по любому блоку → «Вызвать справку».</p>
+        <p>Темный operator cockpit: workflow, Панель допуска, Что мешает запуску, Безопасные действия оператора и backend status_effective. Правая кнопка по любому блоку → «Вызвать справку».</p>
       </div>
     </div>
 
@@ -25,8 +26,9 @@
         <input id="topApiKey" type="password" autocomplete="off" placeholder="OPERATOR_API_KEY / READONLY_API_KEY" />
       </label>
       <span id="topStatus" class="status-pill neutral">загрузка</span>
-      <button id="globalHelpBtn" class="btn soft">Справка</button>
-      <button id="refreshBtn" class="btn primary">Обновить</button>
+      <button id="themeToggleBtn" class="btn soft" aria-label="Переключить темную или светлую тему">Светлая тема</button>
+      <button id="globalHelpBtn" class="btn soft" aria-label="Открыть справку по операторскому экрану">Справка</button>
+      <button id="refreshBtn" class="btn primary" aria-label="Обновить статусы с backend">Обновить</button>
     </div>
   </header>
 
@@ -56,9 +58,13 @@
           <span>Утверждающий, если нужен Go/No-Go</span>
           <input id="workflowApprovedBy" type="text" autocomplete="off" placeholder="approved_by" />
         </label>
+        <label>
+          <span>Комментарий оператора, необязательно</span>
+          <textarea id="workflowComment" rows="2" autocomplete="off" placeholder="Контекст проверки, ссылка на incident/evidence"></textarea>
+        </label>
         <div class="hero-actions">
-          <button id="runNextBtn" class="btn accent">Выполнить следующий доступный шаг</button>
-          <button id="toggleDiagBtn" class="btn ghost">Диагностика</button>
+          <button id="runNextBtn" class="btn accent" aria-label="Выполнить следующий доступный backend-шаг">Выполнить следующий доступный шаг</button>
+          <button id="toggleDiagBtn" class="btn ghost" aria-label="Показать или скрыть техническую диагностику">Диагностика</button>
         </div>
       </aside>
     </section>
@@ -158,7 +164,7 @@
           <h2>Результат последнего действия</h2>
           <p>Здесь показываются stdout/stderr, blocked-reasons, traceback и подсказки по Bybit diagnostics.</p>
         </div>
-        <button id="copyDiagBtn" class="btn ghost">Копировать диагностику</button>
+        <button id="copyDiagBtn" class="btn ghost" aria-label="Копировать JSON-диагностику">Копировать диагностику</button>
       </div>
       <div id="actionResult" class="job-output empty-state">Действия еще не запускались.</div>
     </section>
@@ -175,12 +181,12 @@
     <div id="legacyDomCompatibility" hidden aria-hidden="true">
       <div id="operatorJobResult"></div><div id="cards"></div><div id="blockers"></div><div id="limits"></div><div id="steps"></div><div id="safeActions"></div><div id="paperSummary"></div>
       <input id="commandOperatorKey" /><input id="operatorKey" /><input id="commandReason" /><input id="actionReason" />
-      <button id="runPaperBtn"></button><button id="copyJsonBtn"></button><button id="toggleDiagnosticsBtn"></button>
+      <button id="runPaperBtn"></button><button id="copyJsonBtn"></button><button id="toggleDiagnosticsBtn"></button><button id="themeToggleLegacyBtn"></button><textarea id="workflowCommentLegacy"></textarea>
     </div>
 
     <div class="sr-only" aria-hidden="true">Операторский модуль · Панель допуска · Что мешает запуску · Безопасные действия оператора · Операционный центр · python scripts/bootstrap_db.py · status_effective · Крупные вехи запуска</div>
   </main>
 
-  <script type="module" src="/js/app.js?v=operator-cockpit-20260515"></script>
+  <script type="module" src="/js/app.js?v=operator-cockpit-20260515b"></script>
 </body>
 </html>
