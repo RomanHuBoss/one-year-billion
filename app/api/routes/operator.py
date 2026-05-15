@@ -223,6 +223,20 @@ def _readiness_cards(request: Request, runtime_result) -> list[dict[str, str]]:
             'state': 'ok' if not settings.allow_demo_ml else 'warning',
             'hint': 'ML может только ALLOW/BLOCK/UNAVAILABLE; stale/missing model fail-closed.',
         },
+        {
+            'id': 'reconciliation',
+            'title': 'Reconciliation',
+            'value': 'PASS evidence' if checks.get('reconciliation_pass') or checks.get('go_no_go_evidence_verified') else 'нужна PASS-сверка',
+            'state': 'ok' if checks.get('reconciliation_pass') or checks.get('go_no_go_evidence_verified') else 'warning',
+            'hint': 'ACTIVE допустим только после exchange-confirmed position, reconciliation PASS и совпадения local/exchange state.',
+        },
+        {
+            'id': 'protection',
+            'title': 'Protection',
+            'value': 'обязательный watchdog',
+            'state': 'ok',
+            'hint': 'Нет verified protection — нет ACTIVE; missing protection ведет к incident и reduce-only/flatten логике.',
+        },
     ]
 
 

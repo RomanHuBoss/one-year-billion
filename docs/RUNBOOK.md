@@ -200,3 +200,18 @@ Status, severity, reasons, trace_id и allowed actions отображаются 
 Операторская панель переработана в пошаговый мастер. Все ключевые вехи доступны из frontend: PostgreSQL/migrations, validate/CI evidence, testnet preflight, старт и контроль 14-дневного Phase 0 paper/shadow, security evidence, reconciliation evidence, подписанный Go/No-Go и live preflight. Каждый следующий gate закрыт, пока обязательные подшаги предыдущего gate не завершены. Терминальные команды остаются резервным способом диагностики; штатная работа оператора выполняется через браузер.
 
 Подробности по операторскому процессу включены в `docs/OPERATOR_MANUAL.docx` и `docs/RUNBOOK.md`.
+
+
+## Операторский cockpit: safe-actions через backend `/api/actions`
+
+Редакция 2026-05-15c добавляет запуск разрешенных risk-reducing действий прямо из секции **Безопасные действия оператора**. Используется только backend endpoint `/api/actions`; браузер не получает shell-доступ, не вызывает Bybit и не рассчитывает торговые статусы.
+
+Порядок применения:
+
+1. Ввести `OPERATOR_API_KEY` в поле **Backend API-доступ**. Не вводить Bybit API key.
+2. Указать причину в поле **Причина действия для audit trail**.
+3. Выбрать символ, если действие относится к конкретному инструменту.
+4. Нажать **Выполнить безопасно** только для действий, разрешенных backend: `DISABLE_TRADING`, `CANCEL_OPEN_ENTRIES`, `FLATTEN_REDUCE`, `RESOLVE_INCIDENT`.
+5. Проверить карточку результата: `status`, `reasons`, `trace_id/request_id`.
+
+Запрещено использовать safe-actions как торговую кнопку. В интерфейсе нет действий для открытия позиции, увеличения плеча, повышения риска или обхода risk engine.

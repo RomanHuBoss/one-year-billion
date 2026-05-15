@@ -33,6 +33,7 @@ def test_operator_cockpit_has_modern_sections_and_required_dom_ids():
     }
     assert required_ids <= parser.ids
     assert {'hero-card', 'action-cockpit', 'cards-grid', 'workflow-steps', 'symbol-list'} <= set(parser.classes)
+    assert '/api/actions' in html
     assert 'Панель допуска' in html
     assert 'Что мешает запуску' in html
     assert 'Безопасные действия оператора' in html
@@ -45,6 +46,8 @@ def test_operator_actions_use_in_page_audit_fields_not_browser_prompts():
     assert 'workflowApprovedBy' in js
     assert 'prompt(' not in js
     assert '/api/operator/workflow/actions/' in js
+    assert '/api/actions' in js
+    assert 'safe-action-run' in js
     assert 'X-Idempotency-Key' in js
 
 
@@ -52,6 +55,7 @@ def test_operator_cockpit_css_keeps_responsive_modern_layout():
     css = _read('frontend/css/styles.css')
     assert 'backdrop-filter' in css
     assert 'grid-template-columns: repeat(6' in css
+    assert '.safe-action-card .btn' in css
     assert '.action-cockpit' in css
     assert '.workflow-step.current' in css
     assert '@media (max-width: 1280px)' in css

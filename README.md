@@ -142,6 +142,18 @@ python main.py validate
 #
 ## Операторский cockpit 2026
 
+### Обновление 2026-05-15c
+
+Операторский cockpit доработан по двум приложенным промптам `prompts/redesign_front_page.txt` и `prompts/total_project_check.txt` с учетом `docs/specification.docx`, `docs/roadmap.docx` и `docs/OPERATOR_MANUAL.docx`.
+
+Что изменено в этой редакции:
+
+- `prompts/redesign_front_page.txt` синхронизирован с приложенным промптом;
+- в **Панель допуска** добавлены отдельные backend-карточки `Reconciliation` и `Protection`;
+- **Безопасные действия оператора** теперь можно запускать прямо из cockpit через backend `/api/actions`;
+- safe-actions требуют `OPERATOR_API_KEY`, `reason`, idempotency key и не создают путей открытия сделки, повышения риска или прямого обращения к Bybit из браузера;
+- frontend по-прежнему только отображает backend `status_effective`, `severity`, `reasons`, `trace_id`, `allowed_actions`.
+
 Операторский экран обновлен как темный enterprise/safety cockpit по умолчанию. Светлая тема доступна кнопкой **Светлая тема** в верхней панели и не записывает данные в `localStorage`/`sessionStorage`. Поле **Комментарий оператора** добавляет необязательный audit-context к allowlist job/options; оно не является shell-командой и не передается в Bybit.
 
 Status, severity, reasons, trace_id и allowed actions отображаются только из backend. Если backend не вернул `status_effective`, frontend показывает fail-closed предупреждение `status_effective отсутствует`, а не зеленый статус.

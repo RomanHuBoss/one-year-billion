@@ -21,6 +21,8 @@ def test_operator_dashboard_returns_human_readable_operator_model():
     assert data['steps']
     assert data['symbols']
     assert data['safe_actions']
+    card_ids = {card['id'] for card in data['cards']}
+    assert {'trading', 'database', 'risk', 'live_gate', 'phase', 'ml', 'reconciliation', 'protection'} <= card_ids
     assert data['limits']['phase'] == 0
     assert 'BTCUSDT' in data['limits']['universe']
     assert all('status_label' in row and 'operator_hint' in row for row in data['symbols'])

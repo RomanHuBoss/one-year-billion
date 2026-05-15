@@ -250,12 +250,14 @@ function renderInvariants() {
 function renderSafeActions() {
   const actions = dashboard?.data?.safe_actions || [];
   $('safeActionsList').innerHTML = actions.length ? actions.map(action => `
-    <article class="safe-action-card">
+    <article class="safe-action-card" data-help="safe-actions">
       <span>${escapeHtml(action.risk_direction || 'risk-neutral')}</span>
       <strong>${escapeHtml(action.title || action.action)}</strong>
       <p>${escapeHtml(action.description || '')}</p>
+      <button class="btn secondary safe-action-run" data-safe-action="${escapeHtml(action.action)}" aria-label="Выполнить безопасное действие ${escapeHtml(action.title || action.action)}">Выполнить безопасно</button>
     </article>
   `).join('') : '<div class="empty-state">Backend не разрешил safe-actions для текущего состояния символов.</div>';
+  document.querySelectorAll('[data-safe-action]').forEach(btn => btn.addEventListener('click', () => runSafeAction(btn.dataset.safeAction)));
 }
 
 function symbolTone(row) {
@@ -378,6 +380,34 @@ async function runWorkflowAction(actionId, requiresApprovedBy = false) {
   $('actionResult').innerHTML = '<div class="loader-row"><span class="loader"></span><strong>Запрос отправлен на backend...</strong></div>';
   try {
     const payload = await api(`/api/operator/workflow/actions/${encodeURIComponent(actionId)}`, actionOptions({ reason: reasonText(), approved_by: approvedByText() || undefined, options: { operator_comment: commentText() || undefined } }));
+    renderResult(payload);
+    await loadAll();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function runSafeAction(actionName) {
+  try {
+    ensureActionInput(false);
+  } catch (err) {
+    showError(err);
+    return;
+  }
+  const symbol = selectedSymbol?.symbol || null;
+  const target = {
+    source: 'operator_cockpit',
+    symbol,
+    operator_comment: commentText() || undefined,
+  };
+  $('actionResult').className = 'job-output';
+  $('actionResult').innerHTML = '<div class="loader-row"><span class="loader"></span><strong>Safe-action отправлен на backend...</strong></div>';
+  try {
+    const payload = await api('/api/actions', authOptions({
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': `safe-action-${Date.now()}-${Math.random().toString(16).slice(2)}` },
+      body: JSON.stringify({ action: actionName, reason: reasonText(), target }),
+    }));
     renderResult(payload);
     await loadAll();
   } catch (err) {
