@@ -322,25 +322,41 @@ function renderJobOperatorHints(parsed) {
   return `<div class="job-hints"><h4>Что делать оператору</h4>${timestampText}${syncText}<ul>${hintItems}</ul></div>`;
 }
 
+function renderEnvelopeMeta(payload) {
+  if (!payload) return '';
+  const reasons = Array.isArray(payload.reasons) && payload.reasons.length
+    ? `<p><strong>Reasons:</strong> ${escapeHtml(payload.reasons.join('; '))}</p>`
+    : '';
+  return `
+    <div class="result-meta">
+      <span>status: <code>${escapeHtml(payload.status || 'unknown')}</code></span>
+      <span>request_id: <code>${escapeHtml(payload.request_id || 'не выдан')}</code></span>
+      <span>trace_id: <code>${escapeHtml(payload.trace_id || 'не выдан')}</code></span>
+      <span>server_time: <code>${escapeHtml(payload.server_time || 'не выдан')}</code></span>
+    </div>
+    ${reasons}`;
+}
+
 function renderResult(payload) {
   if (!payload) return;
   const data = payload.data || {};
   if (data.job) {
-    renderJob(data.job);
+    renderJob(data.job, payload);
     pollJob(data.job.job_id).then(loadAll).catch(showError);
     return;
   }
   if (data.paper) {
     const decisions = data.paper.decisions || [];
     $('actionResult').className = 'job-output ok';
-    $('actionResult').innerHTML = `<strong>Paper-прогон выполнен</strong>${decisions.map(d => `<div class="paper-item"><strong>${escapeHtml(d.symbol)} — ${escapeHtml(d.status || 'status_from_backend_missing')}</strong><span>${escapeHtml((d.reasons || []).join('; ') || 'решение записано')}</span></div>`).join('')}`;
+    $('actionResult').innerHTML = `<strong>Paper-прогон выполнен</strong>${renderEnvelopeMeta(payload)}${decisions.map(d => `<div class="paper-item"><strong>${escapeHtml(d.symbol)} — ${escapeHtml(d.status || 'status_from_backend_missing')}</strong><span>${escapeHtml((d.reasons || []).join('; ') || 'решение записано')}</span></div>`).join('')}`;
     return;
   }
-  $('actionResult').className = 'job-output ok';
-  $('actionResult').innerHTML = `<strong>Готово</strong><pre>${escapeHtml(pretty(payload))}</pre>`;
+  const level = payload.status === 'ok' || payload.status === 'accepted' ? 'ok' : ['blocked', 'rejected', 'timeout', 'error'].includes(payload.status) ? 'error' : '';
+  $('actionResult').className = `job-output ${level}`;
+  $('actionResult').innerHTML = `<strong>Backend-результат действия</strong>${renderEnvelopeMeta(payload)}<pre>${escapeHtml(pretty(payload))}</pre>`;
 }
 
-function renderJob(job) {
+function renderJob(job, envelope = null) {
   const level = job.status === 'ok' ? 'ok' : ['blocked', 'timeout', 'error'].includes(job.status) ? 'error' : '';
   const parsedStdout = parseJsonMaybe(job.stdout);
   const hints = renderJobOperatorHints(parsedStdout);
@@ -349,6 +365,7 @@ function renderJob(job) {
   const error = job.error ? `<p class="job-error">${escapeHtml(job.error)}</p>` : '';
   $('actionResult').className = `job-output ${level}`;
   $('actionResult').innerHTML = `<div class="job-head"><strong>${escapeHtml(job.title || job.command_id)}</strong>${badge(job.status, job.status === 'ok' ? 'ok' : job.status === 'running' || job.status === 'queued' ? 'info' : 'danger')}</div>
+    ${renderEnvelopeMeta(envelope)}
     <p><strong>Команда:</strong> <code>${escapeHtml(job.command_display || '')}</code></p>
     <p><strong>Задача:</strong> <code>${escapeHtml(job.job_id)}</code> · <strong>Код выхода:</strong> ${escapeHtml(job.exit_code ?? 'еще нет')}</p>
     <p><strong>Audit:</strong> actor=${escapeHtml(job.actor || '—')} · started=${escapeHtml(job.started_at || '—')} · finished=${escapeHtml(job.finished_at || '—')}</p>${error}${hints}${stdout}${stderr}`;
@@ -357,7 +374,7 @@ function renderJob(job) {
 async function pollJob(jobId) {
   for (let i = 0; i < 90; i += 1) {
     const payload = await api(`/api/operator/jobs/${encodeURIComponent(jobId)}`, authOptions());
-    renderJob(payload.data.job);
+    renderJob(payload.data.job, payload);
     if (!['queued', 'running'].includes(payload.data.job.status)) return;
     await new Promise(resolve => setTimeout(resolve, 1500));
   }

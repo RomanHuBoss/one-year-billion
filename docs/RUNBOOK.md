@@ -215,3 +215,7 @@ Status, severity, reasons, trace_id и allowed actions отображаются 
 5. Проверить карточку результата: `status`, `reasons`, `trace_id/request_id`.
 
 Запрещено использовать safe-actions как торговую кнопку. В интерфейсе нет действий для открытия позиции, увеличения плеча, повышения риска или обхода risk engine.
+
+## Результаты действий: request_id / trace_id / server_time
+
+В актуальной версии карточка результата показывает не только stdout/stderr, но и provenance backend-ответа: `status`, `request_id`, `trace_id`, `server_time` и `reasons`. Это нужно для audit trail и разбора blocked/error-сценариев. Если результат `blocked`, это не означает поломку интерфейса: оператор должен читать `reasons`, исправлять внешний gate или runtime-причину и повторять проверку только через разрешенную backend-команду.

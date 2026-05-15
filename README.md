@@ -22,12 +22,12 @@
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
-Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `136 passed`.
+Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `139 passed`.
 
 
 ## Актуальная редакция после тотальной проверки
 
-Последняя локальная проверка архива выполнена командой `python main.py validate`: `136 passed`, static architecture/import/migration checks PASS, secret scan PASS. `python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице ожидаемо возвращают `blocked` из-за отсутствия внешней PostgreSQL, Bybit credentials и Go/No-Go evidence; это корректное fail-closed поведение.
+Последняя локальная проверка архива выполнена командой `python main.py validate`: `139 passed`, static architecture/import/migration checks PASS, secret scan PASS. `python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице ожидаемо возвращают `blocked` из-за отсутствия внешней PostgreSQL, Bybit credentials и Go/No-Go evidence; это корректное fail-closed поведение.
 
 Документация очищена от служебных отчетных Markdown-файлов. В проекте оставлены только рабочие README и нормативные safety-документы, требуемые specification/roadmap: `README.md`, `README_for_developers.md`, `docs/RUNBOOK.md`, `docs/TRACEABILITY_MATRIX.md`, `docs/GO_NO_GO.md`, а также единое руководство оператора `docs/OPERATOR_MANUAL.docx`.
 
@@ -157,6 +157,11 @@ python main.py validate
 Операторский экран обновлен как темный enterprise/safety cockpit по умолчанию. Светлая тема доступна кнопкой **Светлая тема** в верхней панели и не записывает данные в `localStorage`/`sessionStorage`. Поле **Комментарий оператора** добавляет необязательный audit-context к allowlist job/options; оно не является shell-командой и не передается в Bybit.
 
 Status, severity, reasons, trace_id и allowed actions отображаются только из backend. Если backend не вернул `status_effective`, frontend показывает fail-closed предупреждение `status_effective отсутствует`, а не зеленый статус.
+
+
+### Обновление 2026-05-15d
+
+После повторной обработки по двум приложенным промптам добавлен audit-friendly вывод `request_id`, `trace_id`, `server_time` и `reasons` в карточках результата операторских действий. Дополнительно расширены frontend static-tests: отсутствие browser storage/direct Bybit URL, отсутствие risk-up/manual-trade controls и наличие provenance-метаданных результата. Последняя проверка: `python main.py validate` — `139 passed`; testnet/live preflight в песочнице корректно остаются `blocked` без внешней PostgreSQL, Bybit credentials и Go/No-Go evidence.
 
 ## Операционный центр без терминала
 
