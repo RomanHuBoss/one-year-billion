@@ -56,3 +56,4 @@ def test_operator_cockpit_css_keeps_responsive_modern_layout():
     assert '.workflow-step.current' in css
     assert '@media (max-width: 1280px)' in css
     assert '@media (max-width: 860px)' in css
+    assert ':focus-visible' in css
