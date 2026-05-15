@@ -68,38 +68,56 @@ function readAuthOptions(options = {}) {
 // Legacy allowlist fetch shape for diagnostics: api('/api/operator/commands', readAuthOptions())
 // headers include: 'x-api-key': key
 // Paper отображает status_from_backend_missing, если backend не вернул статус, и не выводит его из client-side risk approval.
+function newIdempotencyKey(namespace) {
+  // Ключ идемпотентности не является секретом, но должен быть достаточно
+  // уникальным, чтобы retry/повторный клик не породил двусмысленный write-request.
+  const randomPart = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  return `${namespace}-${randomPart}`;
+}
+
 function actionOptions(body) {
   return authOptions({
     method: 'POST',
-    headers: { 'X-Idempotency-Key': `workflow-${Date.now()}-${Math.random().toString(16).slice(2)}` },
+    headers: { 'X-Idempotency-Key': newIdempotencyKey('workflow') },
     body: JSON.stringify(body),
   });
+}
+
+function normalizeTone(value) {
+  const normalized = String(value || '').toLowerCase();
+  if (['ok', 'pass', 'passed', 'success'].includes(normalized)) return 'ok';
+  if (['danger', 'critical', 'high', 'error', 'fail', 'failed', 'blocked', 'rejected'].includes(normalized)) return 'danger';
+  if (['warning', 'medium', 'todo', 'pending'].includes(normalized)) return 'warning';
+  if (['locked', 'neutral'].includes(normalized)) return 'neutral';
+  if (['running', 'manual', 'info'].includes(normalized)) return 'info';
+  return 'info';
 }
 
 function statusLabel(status) {
   return {
     ok: 'PASS',
+    pass: 'PASS',
+    success: 'PASS',
     todo: 'НУЖНО',
+    pending: 'ОЖИДАЕТ',
     locked: 'ЗАКРЫТО',
     blocked: 'БЛОК',
+    rejected: 'ОТКЛОНЕНО',
     error: 'ОШИБКА',
+    danger: 'ОПАСНО',
+    critical: 'КРИТИЧНО',
+    high: 'HIGH',
+    medium: 'MEDIUM',
+    neutral: 'НЕЙТРАЛЬНО',
     running: 'ИДЕТ',
     manual: 'ВРУЧНУЮ',
     info: 'INFO',
     warning: 'ВНИМАНИЕ',
-  }[status] || status || '—';
+  }[String(status || '').toLowerCase()] || status || '—';
 }
 
 function statusLevel(status) {
-  return {
-    ok: 'ok',
-    todo: 'warning',
-    locked: 'neutral',
-    blocked: 'danger',
-    error: 'danger',
-    running: 'info',
-    manual: 'info',
-  }[status] || 'info';
+  return normalizeTone(status);
 }
 
 function currentStepIndex() {
@@ -261,12 +279,14 @@ function renderSafeActions() {
 }
 
 function symbolTone(row) {
-  const severity = row.severity_level || row.severity || 'info';
-  if (!row.status_effective) return 'danger';
-  if (row.status_effective === 'ACTIVE') return 'ok';
-  if (row.status_effective === 'ERROR_RECONCILIATION_REQUIRED' || severity === 'danger') return 'danger';
-  if (row.status_effective === 'BLOCKED' || row.status_effective === 'DE_RISK' || severity === 'warning') return 'warning';
-  return 'info';
+  const status = String(row.status_effective || '');
+  const severityTone = normalizeTone(row.severity_level || row.severity || 'info');
+  if (!status) return 'danger';
+  if (status === 'ERROR_RECONCILIATION_REQUIRED') return 'danger';
+  if (severityTone === 'danger') return 'danger';
+  if (status === 'ACTIVE') return 'ok';
+  if (status === 'BLOCKED' || status === 'DE_RISK' || severityTone === 'warning') return 'warning';
+  return severityTone === 'neutral' ? 'neutral' : 'info';
 }
 
 function renderSymbols() {
@@ -278,7 +298,7 @@ function renderSymbols() {
     const aria = `${row.symbol}: ${statusText}; ${reasons || 'причин нет'}; ${row.trace_id || 'trace_id отсутствует'}`;
     return `<button class="symbol-row ${symbolTone(row)} ${selected ? 'selected' : ''}" data-symbol="${escapeHtml(row.symbol)}" aria-label="${escapeHtml(aria)}" title="${escapeHtml(aria)}">
       <span class="symbol-name">${escapeHtml(row.symbol)}</span>
-      <span class="symbol-status">${badge(statusText, row.status_effective ? row.severity_level : 'danger')}<small>${escapeHtml(reasons || 'причин нет')}</small></span>
+      <span class="symbol-status">${badge(statusText, row.status_effective ? normalizeTone(row.severity_level || row.severity) : 'danger')}<small>${escapeHtml(reasons || 'причин нет')}</small></span>
       <span class="symbol-trace">${escapeHtml(row.trace_id || 'trace_id отсутствует')}</span>
     </button>`;
   }).join('') || '<div class="empty-state">Символы не загружены.</div>';
@@ -300,7 +320,7 @@ function renderSymbolDetails() {
   $('symbolDetails').innerHTML = `
     <div class="detail-title">
       <div><h3>${escapeHtml(row.symbol)}</h3><span>${escapeHtml(row.trace_id || 'trace_id отсутствует')}</span></div>
-      ${badge(row.status_label || row.status_effective || 'status_effective отсутствует', row.status_effective ? row.severity_level : 'danger')}
+      ${badge(row.status_label || row.status_effective || 'status_effective отсутствует', row.status_effective ? normalizeTone(row.severity_level || row.severity) : 'danger')}
     </div>
     <div class="detail-grid">
       <div class="detail-box accent"><h4>Что означает статус</h4><p>${escapeHtml(row.operator_hint || '')}</p></div>
@@ -422,7 +442,7 @@ async function runSafeAction(actionName) {
   try {
     const payload = await api('/api/actions', authOptions({
       method: 'POST',
-      headers: { 'X-Idempotency-Key': `safe-action-${Date.now()}-${Math.random().toString(16).slice(2)}` },
+      headers: { 'X-Idempotency-Key': newIdempotencyKey('safe-action') },
       body: JSON.stringify({ action: actionName, reason: reasonText(), target }),
     }));
     renderResult(payload);

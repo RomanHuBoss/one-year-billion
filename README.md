@@ -22,12 +22,12 @@
 
 Важно: внутри архива нельзя подтвердить реальный live-допуск без внешней среды: PostgreSQL, Bybit testnet/prod API keys, реальных runtime-проверок и накопленного paper/shadow evidence. Поэтому корректное поведение проекта до прохождения этих gates — блокировать live.
 
-Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `139 passed`.
+Редакция 8.0 дополнительно закрывает пограничные обходы runtime specs/market snapshot: нулевые `minQty`/`minNotional`, отрицательный spread/depth, некорректный account equity и отрицательные cost/liquidity-параметры конфигурации теперь fail-closed отклоняются кодом, миграциями и тестами. Последний `python main.py validate`: `140 passed`.
 
 
 ## Актуальная редакция после тотальной проверки
 
-Последняя локальная проверка архива выполнена командой `python main.py validate`: `139 passed`, static architecture/import/migration checks PASS, secret scan PASS. `python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице ожидаемо возвращают `blocked` из-за отсутствия внешней PostgreSQL, Bybit credentials и Go/No-Go evidence; это корректное fail-closed поведение.
+Последняя локальная проверка архива выполнена командой `python main.py validate`: `140 passed`, static architecture/import/migration checks PASS, secret scan PASS. `python main.py preflight --mode testnet` и `python main.py preflight --mode live` в песочнице ожидаемо возвращают `blocked` из-за отсутствия внешней PostgreSQL, Bybit credentials и Go/No-Go evidence; это корректное fail-closed поведение.
 
 Документация очищена от служебных отчетных Markdown-файлов. В проекте оставлены только рабочие README и нормативные safety-документы, требуемые specification/roadmap: `README.md`, `README_for_developers.md`, `docs/RUNBOOK.md`, `docs/TRACEABILITY_MATRIX.md`, `docs/GO_NO_GO.md`, а также единое руководство оператора `docs/OPERATOR_MANUAL.docx`.
 
@@ -161,7 +161,13 @@ Status, severity, reasons, trace_id и allowed actions отображаются 
 
 ### Обновление 2026-05-15d
 
-После повторной обработки по двум приложенным промптам добавлен audit-friendly вывод `request_id`, `trace_id`, `server_time` и `reasons` в карточках результата операторских действий. Дополнительно расширены frontend static-tests: отсутствие browser storage/direct Bybit URL, отсутствие risk-up/manual-trade controls и наличие provenance-метаданных результата. Последняя проверка: `python main.py validate` — `139 passed`; testnet/live preflight в песочнице корректно остаются `blocked` без внешней PostgreSQL, Bybit credentials и Go/No-Go evidence.
+После повторной обработки по двум приложенным промптам добавлен audit-friendly вывод `request_id`, `trace_id`, `server_time` и `reasons` в карточках результата операторских действий. Дополнительно расширены frontend static-tests: отсутствие browser storage/direct Bybit URL, отсутствие risk-up/manual-trade controls и наличие provenance-метаданных результата. Последняя проверка: `python main.py validate` — `140 passed`; testnet/live preflight в песочнице корректно остаются `blocked` без внешней PostgreSQL, Bybit credentials и Go/No-Go evidence.
+
+### Обновление 2026-05-15e
+
+После повторной обработки приложенных промптов усилена визуальная нормализация operational severity в cockpit: backend значения `danger/critical/high/blocked/rejected` теперь стабильно отображаются как опасные состояния в бейджах, строках символов и карточке выбранного символа. Это не добавляет frontend-бизнес-логику и не рассчитывает `ACTIVE/BLOCKED`; страница только нормализует визуальный тон уже полученных backend `status_effective/severity`.
+
+Также idempotency key для workflow/safe-actions теперь генерируется через `crypto.randomUUID()` с безопасным fallback, чтобы повторные клики/повторы write-запросов имели однозначный audit/idempotency контекст. Последняя проверка: `python main.py validate` — `140 passed`; testnet/live preflight в песочнице корректно остаются `blocked` без внешней PostgreSQL, Bybit credentials и Go/No-Go evidence.
 
 ## Операционный центр без терминала
 

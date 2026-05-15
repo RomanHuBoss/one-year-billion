@@ -219,3 +219,9 @@ Status, severity, reasons, trace_id и allowed actions отображаются 
 ## Результаты действий: request_id / trace_id / server_time
 
 В актуальной версии карточка результата показывает не только stdout/stderr, но и provenance backend-ответа: `status`, `request_id`, `trace_id`, `server_time` и `reasons`. Это нужно для audit trail и разбора blocked/error-сценариев. Если результат `blocked`, это не означает поломку интерфейса: оператор должен читать `reasons`, исправлять внешний gate или runtime-причину и повторять проверку только через разрешенную backend-команду.
+
+## Примечание 2026-05-15e: severity и idempotency в cockpit
+
+Операторский cockpit не рассчитывает торговые статусы сам, но нормализует визуальный тон backend-полей `status_effective` и `severity`, чтобы `critical/high/danger/blocked/rejected` не выглядели как нейтральные состояния. Если backend не вернул `status_effective`, страница по-прежнему показывает fail-closed предупреждение, а не зеленый ACTIVE.
+
+Workflow и safe-actions отправляют `X-Idempotency-Key`; браузер генерирует его через `crypto.randomUUID()` с fallback. Это не секрет и не торговый сигнал, а защита audit/retry-контекста для backend write endpoints.

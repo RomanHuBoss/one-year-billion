@@ -49,6 +49,8 @@ def test_operator_actions_use_in_page_audit_fields_not_browser_prompts():
     assert '/api/actions' in js
     assert 'safe-action-run' in js
     assert 'X-Idempotency-Key' in js
+    assert 'function newIdempotencyKey(namespace)' in js
+    assert 'crypto?.randomUUID?.()' in js
 
 
 def test_operator_cockpit_css_keeps_responsive_modern_layout():
@@ -118,3 +120,13 @@ def test_operator_frontend_contains_no_risk_up_or_manual_trade_controls():
     assert '/api/actions' in combined
     assert 'safe-action-run' in combined
     assert 'risk_direction' in combined
+
+
+def test_operator_frontend_normalizes_backend_severity_without_local_status_calculation():
+    js = _read('frontend/js/app.js')
+    assert 'function normalizeTone(value)' in js
+    assert "['danger', 'critical', 'high', 'error', 'fail', 'failed', 'blocked', 'rejected']" in js
+    assert "danger: 'ОПАСНО'" in js
+    assert "critical: 'КРИТИЧНО'" in js
+    assert 'normalizeTone(row.severity_level || row.severity)' in js
+    assert 'status_effective ? normalizeTone' in js
